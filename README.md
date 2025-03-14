@@ -19,6 +19,16 @@ Using a terminal in a web browser is sacrilege and also slow, so `csi` brings Cl
 
 Amazon might be unhappy. Please don't abuse this.
 
+## TODO
+
+* [ ] inject credentials
+* [ ] uploading files
+* [ ] downloading files
+* [ ] gimme shell to IP + port or instance ID + port or RDS or RDS + port
+* [ ] temp environments
+* [ ] temp environments + temp principals/roles
+* [ ] tunnel?
+
 ## Setup
 
 1. Install dependencies using `uv` or `pip`

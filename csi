@@ -1,0 +1,301 @@
+#!/usr/bin/env python3
+
+import requests
+import logging
+import signal
+import contextlib
+import uuid
+import botocore
+import urllib
+import boto3
+import botocore.session
+import argparse
+import sys
+import json
+import time
+import subprocess
+from multiprocessing import Process
+from functools import cache
+
+@cache
+def get_region(session=None):
+    if not session:
+        session = boto3.Session()
+    return session.region_name
+
+def call_api(
+    url, service=None, data=b'', method='POST', headers=None, target=None, session=requests, boto_session=None, **kwargs
+):
+    if headers is None:
+        headers = {}
+
+    if boto_session is None:
+        boto_session = boto3.Session()
+
+    if url and not service:
+        _url = urllib.parse.urlparse(url)
+        service = _url.netloc.partition('.')[0]
+
+    headers.setdefault('Content-Type', 'application/x-amz-json-1.1')
+    if target is not None:
+        headers['X-Amz-Target'] = target
+
+    if _json := kwargs.pop('json', None):
+        data = json.dumps(_json)
+
+    request = botocore.awsrequest.AWSRequest(method, url, data=data, headers=headers)
+    signer = botocore.auth.SigV4Auth(boto_session.get_credentials(), service, get_region(boto_session))
+    signer.add_auth(request)
+    response = session.request(request.method, request.url, data=request.data, headers=request.headers, **kwargs)
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        raise Exception(f'{response.json().get("code")}: {response.json().get("message")}') from e
+    return response
+
+def get_vpc_from_subnets(subnets):
+    ec2 = boto3.client('ec2')
+    response = ec2.describe_subnets(SubnetIds=subnets)
+    assert len(response['Subnets']) > 0
+    vpcs = set(subnet['VpcId'] for subnet in response['Subnets'])
+
+    if len(vpcs) > 1:
+        raise ValueError(f'Subnets ({subnets}) are in different VPCs ({vpcs})')
+
+    return list(vpcs)[0]
+
+class Cloudshell:
+    def __init__(self, session=None):
+        if session is None:
+            session = boto3.Session()
+        self.session = session
+
+    def _wait_for_start(self, id):
+        while True:
+            data = self.get_environment_status(EnvironmentId=id)
+            logging.info('Environment is %s ...', data['Status'])
+            if data['Status'] == 'RUNNING':
+                break
+            time.sleep(1)
+
+    def _create_environment(self, name='', subnets=None, sgs=None):
+        data = {'EnvironmentName': name}
+        if subnets:
+            vpc = get_vpc_from_subnets(subnets)
+            data['VpcConfig'] = {
+                'VpcId': vpc,
+                'SecurityGroupIds': sgs,
+                'SubnetIds': subnets,
+            }
+        return self.create_environment(**data)
+
+    def _send_heart_beat_loop(self, id, timeout=60):
+        while True:
+            self.send_heart_beat(EnvironmentId=id)
+            time.sleep(timeout)
+
+    @contextlib.contextmanager
+    def heart_beat(self, id):
+        proc = Process(target=self._send_heart_beat_loop, args=[id])
+        proc.start()
+        try:
+            yield proc
+        finally:
+            if proc.is_alive():
+                proc.terminate()
+
+    # sort of like a real cloudshell client
+    def __getattr__(self, attr):
+        method = attr.title().replace('_', '')
+        method = attr[0] + method[1:]
+
+        def wrapper(**kwargs):
+            service = 'cloudshell'
+            region = get_region(self.session)
+            url = f'https://{service}.{region}.amazonaws.com/{method}'
+            return call_api(url, service, json=kwargs, boto_session=self.session).json()
+
+        return wrapper
+
+cloudshell = Cloudshell()
+
+def wait_for_output(proc, expected_line):
+    for line in iter(proc.stdout.readline, ''):
+        if expected_line in line:
+            return line
+
+# from
+# https://github.com/aws/aws-cli/blob/b31334b1e6dddc3fcffb36fbb82aca0b076520cf/awscli/compat.py#L290
+# https://github.com/aws/aws-cli/blob/558d3d4134882003550035724a4c8549771fd79c/awscli/customizations/sessionmanager.py#L148
+is_windows = sys.platform == 'win32'
+is_macos = sys.platform == 'darwin'
+
+@contextlib.contextmanager
+def ignore_user_entered_signals():
+    """
+    Ignores user entered signals to avoid process getting killed.
+    """
+    if is_windows:
+        signal_list = [signal.SIGINT]
+    else:
+        signal_list = [signal.SIGINT, signal.SIGQUIT, signal.SIGTSTP]
+    actual_signals = []
+    for user_signal in signal_list:
+        actual_signals.append(signal.signal(user_signal, signal.SIG_IGN))
+    try:
+        yield
+    finally:
+        for sig, user_signal in enumerate(signal_list):
+            signal.signal(user_signal, actual_signals[sig])
+
+class CLI:
+    @staticmethod
+    def list(args):
+        for env in cloudshell.describe_environments()['Environments']:
+            vpc_config = env.get('VpcConfig', {})
+            print(
+                env['EnvironmentId'],
+                env['EnvironmentName'],
+                vpc_config.get('VpcId', ''),
+                ','.join(vpc_config.get('SubnetIds', '')),
+                ','.join(vpc_config.get('SecurityGroupIds', '')),
+                sep='\t',
+            )
+
+    ls = list
+
+    @staticmethod
+    def create(args):
+        response = cloudshell._create_environment(args.name, args.subnets, args.security_groups)
+        logging.info('Creating new environment with id: %s', response['EnvironmentId'])
+
+    @staticmethod
+    def start(args):
+        cloudshell.start_environment(EnvironmentId=args.id)
+        cloudshell._wait_for_start(args.id)
+
+    @staticmethod
+    def delete(args):
+        cloudshell.delete_environment(EnvironmentId=args.id)
+
+    @staticmethod
+    def stop(args):
+        cloudshell.stop_environment(EnvironmentId=args.id)
+
+    @staticmethod
+    def ssm(args):
+        cloudshell.start_environment(EnvironmentId=args.id)
+        cloudshell._wait_for_start(args.id)
+        data = cloudshell.create_session(EnvironmentId=args.id)
+        with ignore_user_entered_signals():
+            with cloudshell.heart_beat(args.id):
+                cmd = ['session-manager-plugin', json.dumps(data), get_region(), 'StartSession']
+                subprocess.check_call(cmd)
+
+    # sort of dodgy
+    @staticmethod
+    def execute(args):
+        data = cloudshell.create_session(EnvironmentId=args.id, QCliDisabled=True)
+        cmd = ['session-manager-plugin', json.dumps(data), get_region(), 'StartSession']
+        with cloudshell.heart_beat(args.id):
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                # stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            prompt = str(uuid.uuid4())
+            exit_marker = str(uuid.uuid4())
+            wait_for_output(proc, '$')
+            proc.stdin.write('PS1=' + prompt + '; HISTFILE=/dev/null\n')
+            proc.stdin.flush()
+            wait_for_output(proc, prompt)
+            proc.stdin.write(args.cmd + '\n')
+            proc.stdin.write('echo ' + exit_marker + '$?\n')
+            proc.stdin.flush()
+
+            code = 0
+            executed = False
+            for line in iter(proc.stdout.readline, ''):
+                # ignore everything before prompt and cmd
+                if prompt in line and args.cmd in line:
+                    executed = True
+                elif prompt not in line:
+                    # if command is finished
+                    if exit_marker in line:
+                        code = line.strip().removeprefix(exit_marker)
+                        code = int(code)
+                        # avoid printing the Exiting session ... stuff
+                        executed = False
+                        proc.stdin.write('exit\n')
+                        proc.stdin.flush()
+                    # if command has been executed, but not completed, output all stdout in real time
+                    elif executed:
+                        sys.stdout.write(line)
+                        sys.stdout.flush()
+        return code
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-l',
+        '--log',
+        choices=('debug', 'info', 'warning', 'error', 'critical'),
+        default='info',
+        help='Logging level (default: %(default)s)',
+    )
+
+    subparser = parser.add_subparsers(dest='CMD', required=False)
+
+    for cmd in ('ls', 'list'):
+        sub = subparser.add_parser(cmd, help='List available Cloudshells')
+
+    sub = subparser.add_parser('create', help='Create a new Cloudshell')
+    sub.add_argument('--name', required=False)
+    sub.add_argument('--subnets', nargs='*')
+    sub.add_argument('--security-groups', nargs='*')
+
+    sub = subparser.add_parser('start', help='Start a Cloudshell')
+    sub.add_argument('id')
+
+    sub = subparser.add_parser('delete', help='Delete a Cloudshell')
+    sub.add_argument('id')
+
+    sub = subparser.add_parser('stop', help='Stop a Cloudshell')
+    sub.add_argument('id')
+
+    sub = subparser.add_parser('ssm', help='SSM to a Cloudshell (requires Session Manager plugin)')
+    sub.add_argument('id')
+
+    sub = subparser.add_parser('execute', help='Executes a command on a Cloudshell (requires Session Manager Plugin)')
+    sub.add_argument('id')
+    sub.add_argument('--cmd', '-c', required=True)
+
+    args = parser.parse_args()
+    if not args.CMD:
+        parser.print_help()
+        return
+
+    if args.CMD == 'create':
+        if (args.subnets and not args.security_groups) or (args.security_groups and not args.subnets):
+            parser.error('Both --subnet and --security-groups must be specified together')
+        if args.subnets and not args.name:
+            parser.error('--name must be specified if creating a VPC CloudShell')
+
+    level = getattr(logging, args.log.upper())
+    logging.basicConfig(level=level, format='%(levelname)s\t%(message)s')
+    boto3.set_stream_logger('boto3', level=level + 1)
+    boto3.set_stream_logger('botocore', level=level + 1)
+    boto3.set_stream_logger('urllib3', level=level + 1)
+
+    return getattr(CLI, args.CMD.replace('-', '_'))(args)
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

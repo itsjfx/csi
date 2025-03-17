@@ -155,7 +155,7 @@ class CLI:
             vpc_config = env.get('VpcConfig', {})
             print(
                 env['EnvironmentId'],
-                env['EnvironmentName'],
+                env.get('EnvironmentName', ''),
                 vpc_config.get('VpcId', ''),
                 ','.join(vpc_config.get('SubnetIds', '')),
                 ','.join(vpc_config.get('SecurityGroupIds', '')),

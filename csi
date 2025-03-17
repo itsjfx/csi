@@ -95,7 +95,7 @@ class Cloudshell:
             time.sleep(timeout)
 
     @contextlib.contextmanager
-    def heart_beat(self, id):
+    def _heart_beat(self, id):
         proc = Process(target=self._send_heart_beat_loop, args=[id])
         proc.start()
         try:
@@ -188,7 +188,7 @@ class CLI:
         cloudshell._wait_for_start(args.id)
         data = cloudshell.create_session(EnvironmentId=args.id)
         with ignore_user_entered_signals():
-            with cloudshell.heart_beat(args.id):
+            with cloudshell._heart_beat(args.id):
                 cmd = ['session-manager-plugin', json.dumps(data), get_region(), 'StartSession']
                 subprocess.check_call(cmd)
 
@@ -197,7 +197,7 @@ class CLI:
     def execute(args):
         data = cloudshell.create_session(EnvironmentId=args.id, QCliDisabled=True)
         cmd = ['session-manager-plugin', json.dumps(data), get_region(), 'StartSession']
-        with cloudshell.heart_beat(args.id):
+        with cloudshell._heart_beat(args.id):
             proc = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,

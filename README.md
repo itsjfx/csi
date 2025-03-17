@@ -24,7 +24,7 @@ Amazon might be unhappy. Please don't abuse this.
 * [ ] inject credentials
 * [ ] uploading files
 * [ ] downloading files
-* [ ] gimme shell to IP + port or instance ID + port or RDS or RDS + port
+* [x] gimme shell to IP + port or instance ID + port or RDS or RDS + port (GENIE)
 * [ ] temp environments
 * [ ] temp environments + temp principals/roles
 * [ ] tunnel?
@@ -40,10 +40,10 @@ Amazon might be unhappy. Please don't abuse this.
 ```
 $ csi
 
-usage: csi [-h] [-l {debug,info,warning,error,critical}] {ls,list,create,start,delete,stop,ssm,execute} ...
+usage: csi [-h] [-l {debug,info,warning,error,critical}] {ls,list,create,start,delete,stop,ssm,execute,genie} ...
 
 positional arguments:
-  {ls,list,create,start,delete,stop,ssm,execute}
+  {ls,list,create,start,delete,stop,ssm,execute,genie}
     ls                  List available Cloudshells
     list                List available Cloudshells
     create              Create a new Cloudshell
@@ -52,6 +52,7 @@ positional arguments:
     stop                Stop a Cloudshell
     ssm                 SSM to a Cloudshell (requires Session Manager plugin)
     execute             Executes a command on a Cloudshell (requires Session Manager Plugin)
+    genie               Magically gives you a Cloudshell with the right access in your VPC
 
 options:
   -h, --help            show this help message and exit

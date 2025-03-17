@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import ipaddress
 import requests
 import logging
@@ -326,7 +327,7 @@ class CLI:
                             yield subnet
 
         target = args.ec2 or args.rds or args.ip
-        name = 'genie-' + target
+        name = 'genie-' + re.sub(r'[^a-zA-Z0-9-]', '', f'{target}-{args.port}')
         # TODO
         for env in cloudshell.describe_environments()['Environments']:
             if env.get('EnvironmentName') == name:

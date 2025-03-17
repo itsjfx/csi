@@ -239,7 +239,8 @@ class CLI:
                         sys.stdout.flush()
         return code
 
-def main():
+# for shtab
+def make_main_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-l',
@@ -275,6 +276,10 @@ def main():
     sub.add_argument('id')
     sub.add_argument('--cmd', '-c', required=True)
 
+    return parser
+
+def main():
+    parser = make_main_parser()
     args = parser.parse_args()
     if not args.CMD:
         parser.print_help()

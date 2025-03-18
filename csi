@@ -103,6 +103,7 @@ class Cloudshell:
                 raise NotImplementedError(data['Status'])
 
     def _create_environment(self, name='', subnets=None, sgs=None):
+        logging.debug('Creating environment: %s with subnets: %r and security groups: %r', name, subnets, sgs)
         data = {'EnvironmentName': name}
         if subnets:
             vpc = get_vpc_from_subnets(subnets)
@@ -331,6 +332,7 @@ class CLI:
         # TODO
         for env in cloudshell.describe_environments()['Environments']:
             if env.get('EnvironmentName') == name:
+                logging.debug('Found existing environment')
                 id = env['EnvironmentId']
                 cloudshell.start_environment(EnvironmentId=id)
                 cloudshell._wait_for_start(id)
@@ -349,8 +351,9 @@ class CLI:
             raise NotImplementedError()
 
         rules = list(get_matching_rules(groups))
-
         groups = list(filter_security_groups(rules))
+
+        logging.debug('Security groups: %r', groups)
         if not groups:
             logging.debug('No groups with direct access, looking for whitelisted subnets')
             filtered_subnets = list(filter_allowed_subnets(rules, subnets))

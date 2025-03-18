@@ -384,7 +384,7 @@ class CLI:
         else:
             groups.append(default['SecurityGroups'][0]['GroupId'])
 
-        with cloudshell._use_environment(name, subnets, groups, temporary=args.temp) as id:
+        with cloudshell._use_environment(name, subnets, groups, temporary=args.tmp) as id:
             cloudshell._wait_for_start(id)
             if args.rds:
                 logging.info('Connect to RDS on %s:%d', host, port)

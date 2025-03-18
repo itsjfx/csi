@@ -102,7 +102,9 @@ class Cloudshell:
             else:
                 raise NotImplementedError(data['Status'])
 
-    def _create_environment(self, name='', subnets=None, sgs=None):
+    def _create_environment(self, name='', subnets=None, sgs=None, temporary=False):
+        # if temporary:
+        #     name = str(uuid.uuid4())
         logging.debug('Creating environment: %s with subnets: %r and security groups: %r', name, subnets, sgs)
         data = {'EnvironmentName': name}
         if subnets:
@@ -113,6 +115,20 @@ class Cloudshell:
                 'SubnetIds': subnets,
             }
         return self.create_environment(**data)
+
+    @contextlib.contextmanager
+    def _use_environment(
+        self,
+        *args,
+        temporary=False,
+    ):
+        try:
+            env = self._create_environment(*args, temporary=temporary)
+            yield env['EnvironmentId']
+        finally:
+            if temporary:
+                logging.info('Deleting temporary CloudShell environment...')
+                cloudshell.delete_environment(EnvironmentId=env['EnvironmentId'])
 
     def _send_heart_beat_loop(self, id, timeout=60):
         while True:
@@ -368,11 +384,11 @@ class CLI:
         else:
             groups.append(default['SecurityGroups'][0]['GroupId'])
 
-        id = cloudshell._create_environment(name, subnets, groups)['EnvironmentId']
-        cloudshell._wait_for_start(id)
-        if args.rds:
-            logging.info('Connect to RDS on %s:%d', host, port)
-        cloudshell._ssm(id)
+        with cloudshell._use_environment(name, subnets, groups, temporary=args.temp) as id:
+            cloudshell._wait_for_start(id)
+            if args.rds:
+                logging.info('Connect to RDS on %s:%d', host, port)
+            cloudshell._ssm(id)
 
 # for shtab
 def make_main_parser():
@@ -418,6 +434,7 @@ def make_main_parser():
     group.add_argument('--rds')
 
     sub.add_argument('--port', type=int)
+    sub.add_argument('--tmp', action='store_true')
     sub.add_argument('--protocol', choices=('tcp', 'udp', 'any'), default='any')
 
     return parser

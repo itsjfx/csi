@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+import socket
 import ipaddress
 import requests
 import logging
@@ -355,6 +356,9 @@ class CLI:
                 cloudshell._ssm(id)
                 return
 
+        if args.host:
+            args.ip = socket.gethostbyname(args.host)
+
         if args.ec2:
             vpc, subnets, groups = find_details_for_ec2(args.ec2)
         elif args.rds:
@@ -430,6 +434,7 @@ def make_main_parser():
     sub = subparser.add_parser('genie', help='Magically gives you a Cloudshell with the right access in your VPC')
     group = sub.add_mutually_exclusive_group(required=True)
     group.add_argument('--ip')
+    group.add_argument('--host')
     group.add_argument('--ec2')
     group.add_argument('--rds')
 
@@ -453,8 +458,8 @@ def main():
             parser.error('--name must be specified if creating a VPC CloudShell')
 
     if args.CMD == 'genie':
-        if (args.ec2 or args.ip) and not args.port:
-            parser.error('--port must be specified if using --ec2 or --ip')
+        if (args.ec2 or args.ip or args.host) and not args.port:
+            parser.error('--port must be specified')
 
     level = getattr(logging, args.log.upper())
     logging.basicConfig(level=level, format='%(levelname)s\t%(message)s')

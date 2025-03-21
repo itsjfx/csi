@@ -440,7 +440,7 @@ def make_main_parser():
 
     sub.add_argument('--port', type=int)
     sub.add_argument('--tmp', action='store_true')
-    sub.add_argument('--protocol', choices=('tcp', 'udp', 'any'), default='any')
+    sub.add_argument('--protocol', choices=('tcp', 'udp', 'any'), default='tcp')
 
     return parser
 

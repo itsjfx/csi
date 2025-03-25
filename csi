@@ -345,8 +345,11 @@ class CLI:
                             yield subnet
 
         target = args.ec2 or args.rds or args.ip
-        name = 'genie-' + re.sub(r'[^a-zA-Z0-9-]', '', f'{target}-{args.port}')
-        # TODO
+        # max 24 chars
+        # TODO should throw a GUID in here
+        name = 'csi-' + re.sub(r'[^a-zA-Z0-9-]', '', f'{target}-{args.port}')[:24]
+
+        # TODO DRY
         for env in cloudshell.describe_environments()['Environments']:
             if env.get('EnvironmentName') == name:
                 logging.debug('Found existing environment')

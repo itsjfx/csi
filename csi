@@ -280,12 +280,12 @@ class CLI:
     # super messy
     @staticmethod
     def genie(args):
-        protocols = ['-1']  # any
+        protocols = {'-1'}  # any
         if args.protocol == 'any':
-            protocols.append('tcp')
-            protocols.append('udp')
+            protocols.add('tcp')
+            protocols.add('udp')
         else:
-            protocols.append(args.protocol)
+            protocols.add(args.protocol)
 
         def find_details_for_ip(ip):
             for page in aws_paginate(
@@ -324,12 +324,9 @@ class CLI:
             for page in aws_paginate('ec2', 'describe_security_groups', GroupIds=groups):
                 for group in page['SecurityGroups']:
                     for rule in group['IpPermissions']:
-                        if (
-                            rule['IpProtocol'] in protocols
-                            and rule['FromPort'] <= args.port
-                            and args.port <= rule['ToPort']
-                        ):
-                            yield rule
+                        if rule['IpProtocol'] in protocols:
+                            if ('FromPort' not in rule and 'ToPort' not in rule) or (rule['FromPort'] <= args.port and args.port <= rule['ToPort']):
+                                yield rule
 
         def filter_security_groups(rules):
             for rule in rules:

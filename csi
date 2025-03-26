@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+import hashlib
 import socket
 import ipaddress
 import requests
@@ -104,8 +105,6 @@ class Cloudshell:
                 raise NotImplementedError(data['Status'])
 
     def _create_environment(self, name='', subnets=None, sgs=None, temporary=False):
-        # if temporary:
-        #     name = str(uuid.uuid4())
         logging.debug('Creating environment: %s with subnets: %r and security groups: %r', name, subnets, sgs)
         data = {'EnvironmentName': name}
         if subnets:
@@ -295,18 +294,15 @@ class CLI:
                 interface = page['NetworkInterfaces'][0]
                 if interface['Status'] == 'in-use' and interface['PrivateIpAddress'] == ip:
                     return interface['VpcId'], [interface['SubnetId']], [i['GroupId'] for i in interface['Groups']]
-                    # yield interface['VpcId'], interface['SubnetId'], [i['GroupId'] for i in interface['Groups']]
 
         def find_details_for_ec2(id):
             for page in aws_paginate('ec2', 'describe_instances', Filters=[{'Name': 'instance-id', 'Values': [id]}]):
                 assert len(page['Reservations']) == 1
                 assert len(page['Reservations'][0]['Instances']) == 1
                 instance = page['Reservations'][0]['Instances'][0]
-                # TODO only selecting the first ENI
+                # TODO for now only selecting the first ENI, im lazy to add code to check if things are across VPCs
                 interface = instance['NetworkInterfaces'][0]
                 return interface['VpcId'], [interface['SubnetId']], [i['GroupId'] for i in interface['Groups']]
-                # for interface in instance['NetworkInterfaces']:
-                # yield interface['VpcId'], interface['SubnetId'], [i['GroupId'] for i in interface['Groups']]
 
         def find_details_for_rds(id):
             for page in aws_paginate('rds', 'describe_db_instances', DBInstanceIdentifier=id):
@@ -325,7 +321,9 @@ class CLI:
                 for group in page['SecurityGroups']:
                     for rule in group['IpPermissions']:
                         if rule['IpProtocol'] in protocols:
-                            if ('FromPort' not in rule and 'ToPort' not in rule) or (rule['FromPort'] <= args.port and args.port <= rule['ToPort']):
+                            if ('FromPort' not in rule and 'ToPort' not in rule) or (
+                                rule['FromPort'] <= args.port and args.port <= rule['ToPort']
+                            ):
                                 yield rule
 
         def filter_security_groups(rules):
@@ -341,20 +339,17 @@ class CLI:
                         if cidr.subnet_of(ipaddress.ip_network(group['CidrIp'])):
                             yield subnet
 
-        target = args.ec2 or args.rds or args.ip
-        # max 24 chars
-        # TODO should throw a GUID in here
-        name = 'csi-' + re.sub(r'[^a-zA-Z0-9-]', '', f'{target}-{args.port}')[:24]
-
-        # TODO DRY
-        for env in cloudshell.describe_environments()['Environments']:
-            if env.get('EnvironmentName') == name:
-                logging.debug('Found existing environment')
-                id = env['EnvironmentId']
-                cloudshell.start_environment(EnvironmentId=id)
-                cloudshell._wait_for_start(id)
-                cloudshell._ssm(id)
-                return
+        def get_target_name(target, port):
+            MAX_LEN = 28
+            HASH_LEN = 6
+            name = 'csi-' + re.sub(r'[^a-zA-Z0-9-]', '', f'{target}-{port}')
+            logging.debug('environment name: %s', name)
+            if len(name) > MAX_LEN:
+                logging.debug('name too long, appending hash')
+                hash = hashlib.sha256(name.encode()).hexdigest()
+                name = name[: MAX_LEN - HASH_LEN - 1] + '-' + hash[:HASH_LEN]
+                logging.debug('name with hash: %s', name)
+            return name
 
         if args.host:
             args.ip = socket.gethostbyname(args.host)
@@ -369,6 +364,19 @@ class CLI:
             vpc, subnets, groups = find_details_for_ip(args.ip)
         else:
             raise NotImplementedError()
+
+        target = args.ec2 or args.rds or args.ip
+        name = get_target_name(target, args.port)
+
+        # TODO DRY
+        for env in cloudshell.describe_environments()['Environments']:
+            if env.get('EnvironmentName') == name:
+                logging.debug('Found existing environment')
+                id = env['EnvironmentId']
+                cloudshell.start_environment(EnvironmentId=id)
+                cloudshell._wait_for_start(id)
+                cloudshell._ssm(id)
+                return
 
         rules = list(get_matching_rules(groups))
         groups = list(filter_security_groups(rules))

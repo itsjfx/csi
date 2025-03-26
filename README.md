@@ -1,21 +1,28 @@
 # csi
 
-`csi` is a command-line interface for AWS CloudShell.
+`csi` is a command-line interface for [AWS CloudShell](https://aws.amazon.com/cloudshell).
 
-It allows you to manage and connect to CloudShell sessions from the CLI. It supports VPC and non-VPC sessions.
+It allows you to manage and connect to VPC and non-VPC CloudShell sessions from the CLI.
 
-## Why
+## why
 
-When Amazon announced VPC support to CloudShell it quickly became my favourite service.  
-Having the ability to spawn a CloudShell session within specific security groups and subnets is extremely useful to troubleshoot issues.
+Unfortunately, CloudShell is only available on the AWS console. There's no official support in the AWS CLI or any AWS SDK.
+
+The only way to use CloudShell outside of the console is by making [sigv4](https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html) signed requests to the correct endpoints.
+
+`csi` will handle all the requests for you and aims to provide a sleek interface with some custom commands to make it easier to use CloudShell.
+
+Using a terminal in a web browser is sacrilege - `csi` brings CloudShell to your terminal where it belongs :)
+
+## why care about CloudShell?
+
+In June 2024, Amazon announced the ability to spin up CloudShell environments in a VPC, subnets, and security groups of your choice.
+
+This is extremely useful to troubleshoot issues. The boot time is about half a minute, so much faster than spinning up an  EC2. The environment is also ephemeral which can be useful.
 
 You only pay for data transfer, [no additional fees](https://aws.amazon.com/cloudshell/pricing/), so cost is not of great concern.
 
-Unfortunately, CloudShell is only available on the AWS console, there's no official support in `boto` or the SDKs
-
-Using a terminal in a web browser is sacrilege and also slow, so `csi` brings CloudShell to your terminal where it belongs :)
-
-## Warning
+## warning
 
 Amazon might be unhappy. Please don't abuse this.
 
@@ -29,7 +36,7 @@ Amazon might be unhappy. Please don't abuse this.
 * [ ] temp environments + temp principals/roles
 * [ ] tunnel?
 
-## Setup
+## setup
 
 1. Install dependencies using `uv` or `pip`
 2. If you wish to use `csi ssm` or `csi execute`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`

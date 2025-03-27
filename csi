@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import re
+import urllib.parse
+import base64
 import hashlib
 import socket
 import ipaddress
@@ -80,13 +82,75 @@ def get_vpc_from_subnets(subnets):
 
     return list(vpcs)[0]
 
+def console_login_url(session):
+    url = 'https://signin.aws.amazon.com/federation'
+    dest = 'https://console.aws.amazon.com'
+    if not session:
+        session = boto3.Session()
+
+    creds = session.get_credentials()
+    payload = json.dumps({'sessionId': creds.access_key, 'sessionKey': creds.secret_key, 'sessionToken': creds.token})
+    response = requests.get(url, params={'Action': 'getSigninToken', 'Session': payload}).json()
+
+    params = urllib.parse.urlencode({'Action': 'login', 'Destination': dest, 'SigninToken': response['SigninToken']})
+    return url + '?' + params
+
 class Cloudshell:
     def __init__(self, session=None):
         if session is None:
             session = boto3.Session()
         self.session = session
 
+    # https://a.b.cdn.console.awsstatic.com/a/v1/F3XUYSJVJOSMATZ5TWLDVDGJUUCOTJW5UGHDFLODSUCMMAQRUWFA/main.js
+    def _upload_credentials(self, id):
+        session = requests.Session()
+        session.get(console_login_url(self.session))
+
+        # crypto.randomUUID() equivalent from JS
+        state = str(uuid.uuid4())
+        verifier = str(uuid.uuid4()) + str(uuid.uuid4())
+        params = urllib.parse.urlencode({'state': state})
+        redirect_uri = 'https://auth.cloudshell.ap-southeast-2.aws.amazon.com/callback.js?' + params
+
+        # this code challenge flow is OAuth 2.0 PKCE https://oauth.net/2/pkce
+        digest = hashlib.sha256(verifier.encode('utf-8')).digest()
+        challenge = base64.urlsafe_b64encode(digest).decode('utf-8').rstrip('=')
+        params = {
+            'client_id': 'arn:aws:signin:::console/scallop-shell',
+            'code_challenge': challenge,
+            'code_challenge_method': 'SHA-256',
+            'redirect_uri': redirect_uri,
+            'response_type': 'code',
+        }
+        # no need to follow the callback and look into the HTML
+        # its exposed in query string of the redirect URL
+        url = call_api(
+            'https://%s.signin.aws.amazon.com/oauth' % get_region(self.session),
+            'signin',
+            method='GET',
+            session=session,
+            params=params,
+            allow_redirects=False,
+        ).headers['Location']
+        query = urllib.parse.urlparse(url).query
+        params = urllib.parse.parse_qs(query)
+        code = params['code'][0]
+        assert state == params['state'][0]
+        assert url.startswith(redirect_uri)
+
+        keybase = json.loads(urllib.parse.unquote(session.cookies['aws-userInfo']))['keybase']
+        token = self.redeem_code(
+            AuthCode=code,
+            CodeVerifier=verifier,
+            EnvironmentId=id,
+            KeyBase=keybase,
+            RedirectUri=redirect_uri,
+        )['RefreshToken']
+
+        self.put_credentials(EnvironmentId=id, KeyBase=keybase, RefreshToken=token)
+
     def _ssm(self, id):
+        cloudshell._upload_credentials(id)
         data = cloudshell.create_session(EnvironmentId=id)
         with ignore_user_entered_signals():
             with cloudshell._heart_beat(id):
@@ -471,6 +535,7 @@ def main():
 
     level = getattr(logging, args.log.upper())
     logging.basicConfig(level=level, format='%(levelname)s\t%(message)s')
+    # TODO
     boto3.set_stream_logger('boto3', level=level + 1)
     boto3.set_stream_logger('botocore', level=level + 1)
     boto3.set_stream_logger('urllib3', level=level + 1)

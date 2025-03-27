@@ -112,7 +112,7 @@ Be aware of the [current service quotas](https://docs.aws.amazon.com/general/lat
 
 ## roadmap
 
-* [ ] Inject credentials
+* [x] Inject credentials
 * [ ] Upload files
 * [ ] Download files
 * [x] Genie mode for IP/EC2/RDS access

@@ -42,7 +42,16 @@ def get_cidr_for_subnet(subnet):
     return subnet['Subnets'][0]['CidrBlock']
 
 def call_api(
-    url, service=None, data=b'', method='POST', headers=None, target=None, session=requests, boto_session=None, **kwargs
+    url,
+    service=None,
+    data=b'',
+    method='POST',
+    headers=None,
+    params=None,
+    target=None,
+    session=requests,
+    boto_session=None,
+    **kwargs,
 ):
     if headers is None:
         headers = {}
@@ -61,10 +70,12 @@ def call_api(
     if _json := kwargs.pop('json', None):
         data = json.dumps(_json)
 
-    request = botocore.awsrequest.AWSRequest(method, url, data=data, headers=headers)
+    request = botocore.awsrequest.AWSRequest(method, url, data=data, headers=headers, params=params)
     signer = botocore.auth.SigV4Auth(boto_session.get_credentials(), service, get_region(boto_session))
     signer.add_auth(request)
-    response = session.request(request.method, request.url, data=request.data, headers=request.headers, **kwargs)
+    response = session.request(
+        request.method, request.url, data=request.data, headers=request.headers, params=request.params, **kwargs
+    )
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:

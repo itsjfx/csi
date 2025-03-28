@@ -108,10 +108,11 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 
 Amazon might be unhappy with this unofficial tool. Please don't abuse it.
 
-Be aware of the [current service quotas](https://docs.aws.amazon.com/general/latest/gr/cloudshell.html#limits_cloudshell) for the service, specifically the adjustable 200 monthly hour limit applied across all IAM principals within an account.
+Beware of the [service quotas for CloudShell](https://docs.aws.amazon.com/general/latest/gr/cloudshell.html#limits_cloudshell), specifically the adjustable 200 monthly hour limit **applied across all** IAM principals within an account.
 
 ## roadmap
 
+* [ ] Use name of environment instead of IDs when issuing commands
 * [x] Inject credentials
 * [ ] Upload files
 * [ ] Download files

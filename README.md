@@ -38,6 +38,13 @@ This is extremely useful for troubleshooting issues:
 2. If you wish to use `csi ssm` or `csi execute`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`
 3. Run `csi`
 
+## warnings
+
+* This tool is not an official tool by Amazon/AWS
+* Beware of the [service quotas for CloudShell](https://docs.aws.amazon.com/general/latest/gr/cloudshell.html#limits_cloudshell), specifically the adjustable 200 monthly hour limit **applied across all** IAM principals within an account.
+* This tool is [GPLv3 licensed](./LICENSE) - there is no warranty. If you reach service limits in your account, contact AWS support.
+* CloudShell environments exist per IAM principal. When assuming a role, make sure to do so with a unique role session name for your user.
+
 ## example usage
 
 ### Listing CloudShell Environments
@@ -103,12 +110,6 @@ $ csi genie --host internal-service.example.com --port 8080
 # Create a temporary environment that will be deleted after use
 $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 ```
-
-## warning
-
-Amazon might be unhappy with this unofficial tool. Please don't abuse it.
-
-Beware of the [service quotas for CloudShell](https://docs.aws.amazon.com/general/latest/gr/cloudshell.html#limits_cloudshell), specifically the adjustable 200 monthly hour limit **applied across all** IAM principals within an account.
 
 ## roadmap
 

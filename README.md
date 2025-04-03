@@ -94,7 +94,7 @@ $ csi ssm default
 
 ```bash
 # Run a command on a CloudShell environment
-$ csi execute default --cmd "aws s3 ls"
+$ csi execute default -c "aws s3 ls"
 ```
 
 ### Using Genie Mode

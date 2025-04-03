@@ -442,6 +442,11 @@ class CLI:
                 logging.debug('name with hash: %s', name)
             return name
 
+        def connect_to_environment(id):
+            cloudshell.start_environment(EnvironmentId=id)
+            cloudshell._wait_for_start(id)
+            cloudshell._ssm(id)
+
         if args.host:
             args.ip = socket.gethostbyname(args.host)
 
@@ -459,14 +464,11 @@ class CLI:
         target = args.ec2 or args.rds or args.ip
         name = get_target_name(target, args.port)
 
-        # TODO DRY
-        for env in cloudshell.describe_environments()['Environments']:
+        environments = cloudshell.describe_environments()['Environments']
+        for env in environments:
             if env.get('EnvironmentName') == name:
-                logging.debug('Found existing environment')
-                id = env['EnvironmentId']
-                cloudshell.start_environment(EnvironmentId=id)
-                cloudshell._wait_for_start(id)
-                cloudshell._ssm(id)
+                logging.info('Using existing environment: %s', name)
+                connect_to_environment(env['EnvironmentId'])
                 return
 
         rules = list(get_matching_rules(groups))
@@ -486,6 +488,21 @@ class CLI:
             logging.warning('No default security group found, CloudShell may be missing egress access')
         else:
             groups.append(default['SecurityGroups'][0]['GroupId'])
+
+        for env in environments:
+            vpc_config = env.get('VpcConfig')
+            if (
+                vpc_config
+                and vpc_config['VpcId'] == vpc
+                and set(vpc_config['SubnetIds']) == set(subnets)
+                and set(vpc_config['SecurityGroupIds']) == set(groups)
+            ):
+                logging.warning(
+                    'Environment: %s has the same VPC config, re-using existing environment',
+                    env.get('EnvironmentName', DEFAULT_ENVIRONMENT),
+                )
+                connect_to_environment(env['EnvironmentId'])
+                return
 
         with cloudshell._use_environment(name, subnets, groups, temporary=args.tmp) as id:
             cloudshell._wait_for_start(id)

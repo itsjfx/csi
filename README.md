@@ -122,7 +122,7 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 * [x] Inject credentials
 * [ ] Upload files
 * [ ] Download files
-* [ ] genie: re-use existing environments if the VPC configuration is compatible
+* [x] genie: re-use existing environments if the VPC configuration is compatible
 * [x] Genie mode for IP/EC2/RDS access
 * [x] Temporary environments
 * [ ] Port tunneling

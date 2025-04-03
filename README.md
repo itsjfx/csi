@@ -27,7 +27,7 @@ This is extremely useful for troubleshooting issues:
 * **Create VPC environments** with specific VPC, subnets, and security groups
 * **Connect** to CloudShell environments via SSM in the terminal
 * **Execute commands** remotely on CloudShell environments
-* **Genie** - automatically create a CloudShell with the right network access to reach:
+* **Genie** - magically creates a CloudShell with the right network access to reach:
     * hostnames/IP addresses and ports
     * EC2 instances
     * RDS databases
@@ -83,14 +83,14 @@ $ csi delete default
 $ csi delete 90356db8-8797-4d97-b776-2fb3696e0132
 ```
 
-### Connecting to CloudShell
+### Connecting to a CloudShell Environment
 
 ```bash
 # Connect to a CloudShell environment via SSM
 $ csi ssm default
 ```
 
-### Executing Commands
+### Executing Commands on a CloudShell Environment
 
 ```bash
 # Run a command on a CloudShell environment
@@ -98,6 +98,8 @@ $ csi execute default --cmd "aws s3 ls"
 ```
 
 ### Using Genie Mode
+
+Genie magically creates a CloudShell with the right network access to reach the resources you need.
 
 ```bash
 # Connect to an EC2 instance on port 22

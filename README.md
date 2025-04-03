@@ -47,6 +47,8 @@ This is extremely useful for troubleshooting issues:
 
 ## example usage
 
+The identifier or name can be used to refer to a CloudShell environment
+
 ### Listing CloudShell Environments
 
 ```bash
@@ -69,12 +71,15 @@ $ csi create --name my-vpc-shell --subnets subnet-01234567890abcdef --security-g
 
 ```bash
 # Start an environment
+$ csi start default
 $ csi start 90356db8-8797-4d97-b776-2fb3696e0132
 
 # Stop an environment
+$ csi stop default
 $ csi stop 90356db8-8797-4d97-b776-2fb3696e0132
 
 # Delete an environment
+$ csi delete default
 $ csi delete 90356db8-8797-4d97-b776-2fb3696e0132
 ```
 
@@ -82,14 +87,14 @@ $ csi delete 90356db8-8797-4d97-b776-2fb3696e0132
 
 ```bash
 # Connect to a CloudShell environment via SSM
-$ csi ssm 90356db8-8797-4d97-b776-2fb3696e0132
+$ csi ssm default
 ```
 
 ### Executing Commands
 
 ```bash
 # Run a command on a CloudShell environment
-$ csi execute 90356db8-8797-4d97-b776-2fb3696e0132 --cmd "aws s3 ls"
+$ csi execute default --cmd "aws s3 ls"
 ```
 
 ### Using Genie Mode
@@ -113,10 +118,11 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 
 ## roadmap
 
-* [ ] Use name of environment instead of IDs when issuing commands
+* [x] Use name of environment instead of IDs when issuing commands
 * [x] Inject credentials
 * [ ] Upload files
 * [ ] Download files
+* [ ] genie: re-use existing environments if the VPC configuration is compatible
 * [x] Genie mode for IP/EC2/RDS access
 * [x] Temporary environments
 * [ ] Port tunneling

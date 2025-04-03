@@ -23,6 +23,8 @@ import subprocess
 from multiprocessing import Process
 from functools import cache
 
+DEFAULT_ENVIRONMENT = 'default'
+
 @cache
 def aws_client(*args, **kwargs):
     return boto3.client(*args, **kwargs)
@@ -179,16 +181,12 @@ class Cloudshell:
             else:
                 raise NotImplementedError(data['Status'])
 
-    def _create_environment(self, name='', subnets=None, sgs=None, temporary=False):
-        logging.debug('Creating environment: %s with subnets: %r and security groups: %r', name, subnets, sgs)
-        data = {'EnvironmentName': name}
+    def _create_environment(self, name=None, subnets=None, sgs=None, temporary=False):
+        data = {}
         if subnets:
+            logging.debug('Creating environment: %s with subnets: %r and security groups: %r', name, subnets, sgs)
             vpc = get_vpc_from_subnets(subnets)
-            data['VpcConfig'] = {
-                'VpcId': vpc,
-                'SecurityGroupIds': sgs,
-                'SubnetIds': subnets,
-            }
+            data = {'EnvironmentName': name, 'VpcConfig': {'VpcId': vpc, 'SecurityGroupIds': sgs, 'SubnetIds': subnets}}
         return self.create_environment(**data)
 
     @contextlib.contextmanager
@@ -220,16 +218,32 @@ class Cloudshell:
             if proc.is_alive():
                 proc.terminate()
 
+    @cache
+    def _lookup_id(self, id):
+        try:
+            uuid.UUID(id)
+            return id
+        except ValueError:
+            for environment in self.describe_environments()['Environments']:
+                name = environment.get('EnvironmentName')
+                if environment['EnvironmentId'] == id or (not name and id == DEFAULT_ENVIRONMENT) or name == id:
+                    return environment['EnvironmentId']
+
     # sort of like a real cloudshell client
     def __getattr__(self, attr):
         method = attr.title().replace('_', '')
         method = attr[0] + method[1:]
 
-        def wrapper(**kwargs):
+        def wrapper(EnvironmentId=None, **kwargs):
             service = 'cloudshell'
             region = get_region(self.session)
             url = f'https://{service}.{region}.amazonaws.com/{method}'
-            return call_api(url, service, json=kwargs, boto_session=self.session).json()
+            _kwargs = {**kwargs}
+            # TODO
+            # this is extremely dodgy and i may remove it
+            if EnvironmentId:
+                _kwargs['EnvironmentId'] = self._lookup_id(EnvironmentId)
+            return call_api(url, service, json=_kwargs, boto_session=self.session).json()
 
         return wrapper
 
@@ -268,10 +282,12 @@ class CLI:
     @staticmethod
     def list(args):
         for env in cloudshell.describe_environments()['Environments']:
+            status = cloudshell.get_environment_status(env['EnvironmentId'])
             vpc_config = env.get('VpcConfig', {})
             print(
                 env['EnvironmentId'],
-                env.get('EnvironmentName', 'default'),
+                env.get('EnvironmentName', DEFAULT_ENVIRONMENT),
+                status['Status'],
                 vpc_config.get('VpcId', ''),
                 ','.join(vpc_config.get('SubnetIds', '')),
                 ','.join(vpc_config.get('SecurityGroupIds', '')),
@@ -536,9 +552,11 @@ def main():
 
     if args.CMD == 'create':
         if (args.subnets and not args.security_groups) or (args.security_groups and not args.subnets):
-            parser.error('Both --subnet and --security-groups must be specified together')
+            parser.error('Both --subnets and --security-groups must be set')
         if args.subnets and not args.name:
             parser.error('--name must be specified if creating a VPC CloudShell')
+        if not args.subnets and args.name:
+            parser.error('--subnets and --security-groups must be set if setting name')
 
     if args.CMD == 'genie':
         if (args.ec2 or args.ip or args.host) and not args.port:

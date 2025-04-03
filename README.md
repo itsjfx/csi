@@ -101,6 +101,8 @@ $ csi execute default -c 'aws s3 ls'
 
 Genie magically creates a CloudShell with the right network access to reach the resources you need.
 
+Temporary environments can be created with `--tmp`
+
 ```bash
 # Connect to an EC2 instance on port 22
 $ csi genie --ec2 i-01234567890abcdef --port 22

@@ -112,7 +112,7 @@ $ csi genie --ip 10.0.0.123 --port 3306
 # Connect to a hostname and port (note this hostname must be externally resolvable)
 $ csi genie --host internal-service.example.com --port 8080
 
-# Create a temporary environment that will be deleted after use
+# Create a temporary environment that will be deleted after use with --tmp
 $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 ```
 

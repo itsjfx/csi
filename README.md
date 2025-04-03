@@ -53,8 +53,9 @@ The identifier or name can be used to refer to a CloudShell environment
 
 ```bash
 $ csi ls
-d4011ed9-eb68-4f9a-9288-aa17b92fce3d  my-environment  vpc-01234567890abcdef  subnet-01234567890abcdef  sg-01234567890abcdef
-90356db8-8797-4d97-b776-2fb3696e0132  default
+f2bc9d05-379a-4567-a7e6-8e1d70fbcca4    default RUNNING
+47f0d505-bb2b-49b6-9cba-439b57923b53    csi-rds-5432    RUNNING vpc-09453d2535f674519   subnet-0228b118ea7fc7ea0,subnet-0a330e519a4bf3d6f       sg-0ea0e8c8ad969f8be,sg-0ca1d4e7570da9e41
+5a856d29-dfb7-4a77-8f48-52d908f93487    csi-10104145-5432       RUNNING vpc-09453d2535f674519   subnet-0228b118ea7fc7ea0        sg-0ea0e8c8ad969f8be,sg-0ca1d4e7570da9e41
 ```
 
 ### Creating a CloudShell Environment

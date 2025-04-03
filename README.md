@@ -4,7 +4,7 @@
 
 It allows you to manage and connect to VPC and non-VPC CloudShell sessions directly from your command line.
 
-## why CSI?
+## why csi?
 
 Unfortunately, CloudShell is only available on the AWS console. There's no official support in the AWS CLI or any AWS SDK.
 

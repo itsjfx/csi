@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from concurrent.futures import ThreadPoolExecutor
 import re
 import urllib.parse
 import base64
@@ -281,18 +282,23 @@ def ignore_user_entered_signals():
 class CLI:
     @staticmethod
     def list(args):
-        for env in cloudshell.describe_environments()['Environments']:
+        def job(env):
             status = cloudshell.get_environment_status(env['EnvironmentId'])
             vpc_config = env.get('VpcConfig', {})
-            print(
+            return (
                 env['EnvironmentId'],
                 env.get('EnvironmentName', DEFAULT_ENVIRONMENT),
                 status['Status'],
                 vpc_config.get('VpcId', ''),
                 ','.join(vpc_config.get('SubnetIds', '')),
                 ','.join(vpc_config.get('SecurityGroupIds', '')),
-                sep='\t',
             )
+
+        with ThreadPoolExecutor() as executor:
+            # this runs multi-threaded but only outputs
+            # when all threads are complete to preserve ordering
+            for result in list(executor.map(job, cloudshell.describe_environments()['Environments'])):
+                print(*result, sep='\t')
 
     ls = list
 

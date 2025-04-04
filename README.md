@@ -4,7 +4,7 @@
 
 It allows you to manage and connect to VPC and non-VPC CloudShell sessions directly from your command line.
 
-## why csi?
+## Why csi?
 
 Unfortunately, CloudShell is only available on the AWS console. There's no official support in the AWS CLI or any AWS SDK.
 
@@ -125,8 +125,8 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 
 * [x] Use name of environment instead of IDs when issuing commands
 * [x] Inject credentials
-* [ ] Upload files
-* [ ] Download files
+* [x] Upload files
+* [x] Download files
 * [x] genie: re-use existing environments if the VPC configuration is compatible
 * [x] Genie mode for IP/EC2/RDS access
 * [x] Temporary environments

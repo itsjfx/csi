@@ -46,11 +46,11 @@ This is extremely useful for troubleshooting issues:
 * This tool is [GPLv3 licensed](./LICENSE) - there is no warranty. If you reach service limits in your account, contact AWS support.
 * CloudShell environments exist per IAM principal. When assuming a role, make sure to do so with a unique role session name for yourself.
 
-## example usage
+## Example usage
 
 You can refer by the identifier or name of a CloudShell environment in commands
 
-### Listing CloudShell Environments
+### Listing CloudShell environments
 
 ```bash
 $ csi ls
@@ -59,7 +59,7 @@ d29340e9-d1a5-4509-964a-df67271410cf  csi-i-0441309a8e1338cd1-443   SUSPENDED  v
 e8278021-e179-4e44-9e7d-6fedd64960f1  csi-rds                       SUSPENDED  vpc-00235e1cd5f421ea3  subnet-09109a275b488cb8b,subnet-0c8fb515762607bcc
 ```
 
-### Creating a CloudShell Environment
+### Creating a CloudShell environment
 
 ```bash
 # Create a default environment
@@ -69,7 +69,7 @@ $ csi create
 $ csi create --name my-vpc-shell --subnets subnet-01234567890abcdef --security-groups sg-01234567890abcdef
 ```
 
-### Managing CloudShell Environments
+### Managing CloudShell environments
 
 ```bash
 # Start an environment
@@ -85,7 +85,7 @@ $ csi delete default
 $ csi delete 90356db8-8797-4d97-b776-2fb3696e0132
 ```
 
-### Connecting to a CloudShell Environment via Systems Manager (SSM)
+### Connecting to a CloudShell environment via Systems Manager (SSM)
 
 ```bash
 $ csi ssm default
@@ -95,13 +95,13 @@ Starting session with SessionId: 1743751285551588149-un38ksdoyu7u7suz6li3vx53r4
 cloudshell-user
 ```
 
-### Executing Commands on a CloudShell Environment
+### Executing commands on a CloudShell environment
 
 ```bash
 $ csi execute default -c 'aws s3 ls'
 ```
 
-### Uploading and Downloading Files
+### Uploading and Downloading files
 
 ```bash
 $ csi upload default /tmp/data.sql /tmp/data.sql
@@ -109,7 +109,7 @@ $ csi upload default /tmp/data.sql /tmp/data.sql
 $ csi download default /tmp/data.sql /tmp/
 ```
 
-### Genie Mode
+### Magic Genie
 
 Genie magically creates a CloudShell with the correct network access to reach the resource you specify.
 
@@ -132,7 +132,7 @@ $ csi genie --host internal-service.example.com --port 8080
 $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 ```
 
-## roadmap
+## Roadmap
 
 * [x] Use name of environment instead of IDs when issuing commands
 * [x] Inject credentials
@@ -141,4 +141,4 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 * [x] genie: re-use existing environments if the VPC configuration is compatible
 * [x] Genie mode for IP/EC2/RDS access
 * [x] Temporary environments
-* [ ] Port tunneling
+* [ ] Port tunneling (hard)

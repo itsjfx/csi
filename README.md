@@ -4,7 +4,19 @@
 
 It allows you to manage and connect to VPC and non-VPC CloudShell sessions directly from your command line.
 
-## Why csi?
+## Key features
+
+* **List and manage** CloudShell environments
+* **Create VPC environments** with specific VPC, subnets, and security groups
+* **Connect** to CloudShell environments via SSM in the terminal
+* **Download and upload files** between your machine and CloudShell environments
+* **Execute commands** remotely on CloudShell environments
+* **Genie** - magically creates a CloudShell with the right network access to reach:
+    * hostnames/IP addresses and ports
+    * EC2 instances
+    * RDS databases
+
+## Why use csi?
 
 Unfortunately, CloudShell is only available on the AWS console. There's no official support in the AWS CLI or any AWS SDK.
 
@@ -20,18 +32,6 @@ This is extremely useful for troubleshooting issues:
 * boot time is about half a minute, much faster than spinning up an ec2
 * environments are ephemeral, which can be useful for testing and quick tasks
 * you only pay for data transfer, [no additional fees](https://aws.amazon.com/cloudshell/pricing)
-
-## Key features
-
-* **List and manage** CloudShell environments
-* **Create VPC environments** with specific VPC, subnets, and security groups
-* **Connect** to CloudShell environments via SSM in the terminal
-* **Download and upload files** between your machine and CloudShell environments
-* **Execute commands** remotely on CloudShell environments
-* **Genie** - magically creates a CloudShell with the right network access to reach:
-    * hostnames/IP addresses and ports
-    * EC2 instances
-    * RDS databases
 
 ## Setup
 

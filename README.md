@@ -12,7 +12,7 @@ The only way to use CloudShell outside of the console is by making [sigv4](https
 
 `csi` handles all these requests for you and provides a sleek interface with custom commands to make CloudShell easier to use.
 
-## why care about cloudshell?
+## Why care about cloudshell?
 
 In June 2024, Amazon announced the ability to spin up CloudShell environments in a VPC, subnets, and security groups of your choice.
 
@@ -21,41 +21,42 @@ This is extremely useful for troubleshooting issues:
 * environments are ephemeral, which can be useful for testing and quick tasks
 * you only pay for data transfer, [no additional fees](https://aws.amazon.com/cloudshell/pricing)
 
-## key features
+## Key features
 
 * **List and manage** CloudShell environments
 * **Create VPC environments** with specific VPC, subnets, and security groups
 * **Connect** to CloudShell environments via SSM in the terminal
+* **Download and upload files** between your machine and CloudShell environments
 * **Execute commands** remotely on CloudShell environments
 * **Genie** - magically creates a CloudShell with the right network access to reach:
     * hostnames/IP addresses and ports
     * EC2 instances
     * RDS databases
 
-## setup
+## Setup
 
 1. Install dependencies using `uv` or `pip`
-2. If you wish to use `csi ssm` or `csi execute`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`
+2. If you wish to use `csi ssm`, `csi execute`, or `csi genie`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`
 3. Run `csi`
 
-## warnings
+## Warnings
 
 * This tool is not an official tool by Amazon/AWS
 * Beware of the [service quotas for CloudShell](https://docs.aws.amazon.com/general/latest/gr/cloudshell.html#limits_cloudshell), specifically the adjustable 200 monthly hour limit **applied across all** IAM principals within an account.
 * This tool is [GPLv3 licensed](./LICENSE) - there is no warranty. If you reach service limits in your account, contact AWS support.
-* CloudShell environments exist per IAM principal. When assuming a role, make sure to do so with a unique role session name for your user.
+* CloudShell environments exist per IAM principal. When assuming a role, make sure to do so with a unique role session name for yourself.
 
 ## example usage
 
-The identifier or name can be used to refer to a CloudShell environment
+You can refer by the identifier or name of a CloudShell environment in commands
 
 ### Listing CloudShell Environments
 
 ```bash
 $ csi ls
-f2bc9d05-379a-4567-a7e6-8e1d70fbcca4    default RUNNING
-47f0d505-bb2b-49b6-9cba-439b57923b53    csi-rds-5432    RUNNING vpc-09453d2535f674519   subnet-0228b118ea7fc7ea0,subnet-0a330e519a4bf3d6f       sg-0ea0e8c8ad969f8be,sg-0ca1d4e7570da9e41
-5a856d29-dfb7-4a77-8f48-52d908f93487    csi-10104145-5432       RUNNING vpc-09453d2535f674519   subnet-0228b118ea7fc7ea0        sg-0ea0e8c8ad969f8be,sg-0ca1d4e7570da9e41
+90356db8-8797-4d97-b776-2fb3696e0132  default                       RUNNING
+d29340e9-d1a5-4509-964a-df67271410cf  csi-i-0441309a8e1338cd1-443   SUSPENDED  vpc-00235e1cd5f421ea3  subnet-09109a275b488cb8b
+e8278021-e179-4e44-9e7d-6fedd64960f1  csi-rds                       SUSPENDED  vpc-00235e1cd5f421ea3  subnet-09109a275b488cb8b,subnet-0c8fb515762607bcc
 ```
 
 ### Creating a CloudShell Environment
@@ -84,25 +85,35 @@ $ csi delete default
 $ csi delete 90356db8-8797-4d97-b776-2fb3696e0132
 ```
 
-### Connecting to a CloudShell Environment
+### Connecting to a CloudShell Environment via Systems Manager (SSM)
 
 ```bash
-# Connect to a CloudShell environment via SSM
 $ csi ssm default
+
+Starting session with SessionId: 1743751285551588149-un38ksdoyu7u7suz6li3vx53r4
+~ $ whoami
+cloudshell-user
 ```
 
 ### Executing Commands on a CloudShell Environment
 
 ```bash
-# Run a command on a CloudShell environment
 $ csi execute default -c 'aws s3 ls'
 ```
 
-### Using Genie Mode
+### Uploading and Downloading Files
 
-Genie magically creates a CloudShell with the right network access to reach the resources you need.
+```bash
+$ csi upload default /tmp/data.sql /tmp/data.sql
 
-Temporary environments can be created with `--tmp`
+$ csi download default /tmp/data.sql /tmp/
+```
+
+### Genie Mode
+
+Genie magically creates a CloudShell with the correct network access to reach the resource you specify.
+
+Temporary genie environments can be created with `--tmp`
 
 ```bash
 # Connect to an EC2 instance on port 22

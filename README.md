@@ -12,7 +12,7 @@ The only way to use CloudShell outside of the console is by making [sigv4](https
 
 `csi` handles all these requests for you and provides a sleek interface with custom commands to make CloudShell easier to use.
 
-## Why care about cloudshell?
+## Why care about CloudShell?
 
 In June 2024, Amazon announced the ability to spin up CloudShell environments in a VPC, subnets, and security groups of your choice.
 

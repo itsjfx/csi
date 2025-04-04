@@ -164,6 +164,51 @@ class Cloudshell:
 
         self.put_credentials(EnvironmentId=id, KeyBase=keybase, RefreshToken=token)
 
+    def _execute(self, id, cmd, stdout=sys.stdout):
+        data = cloudshell.create_session(EnvironmentId=id, QCliDisabled=True)
+        with cloudshell._heart_beat(id):
+            proc = subprocess.Popen(
+                ['session-manager-plugin', json.dumps(data), get_region(), 'StartSession'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                # stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            prompt = str(uuid.uuid4())
+            exit_marker = str(uuid.uuid4())
+            wait_for_output(proc, '$')
+            proc.stdin.write('PS1=' + prompt + '; HISTFILE=/dev/null\n')
+            proc.stdin.flush()
+            wait_for_output(proc, prompt)
+            proc.stdin.write(cmd + '\n')
+            proc.stdin.write('echo ' + exit_marker + '$?\n')
+            proc.stdin.flush()
+
+            code = 0
+            executed = False
+            # TODO handle stderr
+            for line in iter(proc.stdout.readline, ''):
+                # ignore everything before prompt and cmd
+                if prompt in line and cmd in line:
+                    executed = True
+                elif prompt not in line:
+                    # if command is finished
+                    if exit_marker in line:
+                        code = line.strip().removeprefix(exit_marker)
+                        code = int(code)
+                        # avoid printing the Exiting session ... stuff
+                        executed = False
+                        proc.stdin.write('exit\n')
+                        proc.stdin.flush()
+                    # if command has been executed, but not completed, output all stdout in real time
+                    elif executed:
+                        stdout.write(line)
+                        stdout.flush()
+        return code
+
     def _ssm(self, id):
         cloudshell._upload_credentials(id)
         data = cloudshell.create_session(EnvironmentId=id)
@@ -222,6 +267,7 @@ class Cloudshell:
 
     @cache
     def _lookup_id(self, id):
+        # screw anybody naming environments with a UUID
         try:
             uuid.UUID(id)
             return id
@@ -283,7 +329,6 @@ def ignore_user_entered_signals():
 class CLI:
     @staticmethod
     def list(args):
-        tty = os.isatty(sys.stdout.fileno())
         def job(env):
             status = cloudshell.get_environment_status(env['EnvironmentId'])
             vpc_config = env.get('VpcConfig', {})
@@ -301,7 +346,7 @@ class CLI:
                 for result in executor.map(job, cloudshell.describe_environments()['Environments']):
                     yield result
 
-        if not tty:
+        if not os.isatty(sys.stdout.fileno()):
             for result in get_details():
                 print(*result, sep='\t')
         else:
@@ -342,49 +387,7 @@ class CLI:
     # sort of dodgy
     @staticmethod
     def execute(args):
-        data = cloudshell.create_session(EnvironmentId=args.id, QCliDisabled=True)
-        cmd = ['session-manager-plugin', json.dumps(data), get_region(), 'StartSession']
-        with cloudshell._heart_beat(args.id):
-            proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                # stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-            )
-
-            prompt = str(uuid.uuid4())
-            exit_marker = str(uuid.uuid4())
-            wait_for_output(proc, '$')
-            proc.stdin.write('PS1=' + prompt + '; HISTFILE=/dev/null\n')
-            proc.stdin.flush()
-            wait_for_output(proc, prompt)
-            proc.stdin.write(args.cmd + '\n')
-            proc.stdin.write('echo ' + exit_marker + '$?\n')
-            proc.stdin.flush()
-
-            code = 0
-            executed = False
-            for line in iter(proc.stdout.readline, ''):
-                # ignore everything before prompt and cmd
-                if prompt in line and args.cmd in line:
-                    executed = True
-                elif prompt not in line:
-                    # if command is finished
-                    if exit_marker in line:
-                        code = line.strip().removeprefix(exit_marker)
-                        code = int(code)
-                        # avoid printing the Exiting session ... stuff
-                        executed = False
-                        proc.stdin.write('exit\n')
-                        proc.stdin.flush()
-                    # if command has been executed, but not completed, output all stdout in real time
-                    elif executed:
-                        sys.stdout.write(line)
-                        sys.stdout.flush()
-        return code
+        return cloudshell._execute(args.id, args.cmd)
 
     # super messy
     @staticmethod

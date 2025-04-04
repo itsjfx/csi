@@ -314,6 +314,9 @@ class CLI:
 
     @staticmethod
     def create(args):
+        if args.name == DEFAULT_ENVIRONMENT:
+            logging.error('You cannot create an environment named %s', DEFAULT_ENVIRONMENT)
+            return 2
         response = cloudshell._create_environment(args.name, args.subnets, args.security_groups)
         logging.info('Creating new environment with id: %s', response['EnvironmentId'])
 

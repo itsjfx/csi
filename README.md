@@ -39,6 +39,12 @@ This is extremely useful for troubleshooting issues:
 2. If you wish to use `csi ssm`, `csi execute`, or `csi genie`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`
 3. Run `csi`
 
+If you want tab completion, completion files are in [completions/](./completions/)
+* For `bash`, put `csi.bash` in `$XDG_DATA_HOME/bash-completion/` or `~/.local/share/bash-completion/` if `$XDG_DATA_HOME` is not set
+    * e.g. `ln -srf completions/csi.bash ~/.local/share/bash-completion/`
+* For `zsh`, put `csi.zsh` somewhere in your `fpath` as `_csi`
+    * `ln -srf completions/csi.zsh /path/to/fpath/_csi`
+
 ## Warnings
 
 * This tool is not an official tool by Amazon/AWS
@@ -141,4 +147,6 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 * [x] genie: re-use existing environments if the VPC configuration is compatible
 * [x] Genie mode for IP/EC2/RDS access
 * [x] Temporary environments
+* [x] Tab completion
+* [ ] Better tab completion (complete opts)
 * [ ] Port tunneling (hard)

@@ -345,6 +345,7 @@ class CLI:
                 ','.join(vpc_config.get('SubnetIds', '')),
                 # ','.join(vpc_config.get('SecurityGroupIds', '')),
             )
+
         def get_details():
             with ThreadPoolExecutor() as executor:
                 # this runs multi-threaded but preserves ordering
@@ -635,9 +636,9 @@ def make_main_parser():
         sub = subparser.add_parser(cmd, help='List available CloudShells')
 
     sub = subparser.add_parser('create', help='Create a new CloudShell')
-    sub.add_argument('--name', required=False)
-    sub.add_argument('--subnets', nargs='*')
-    sub.add_argument('--security-groups', nargs='*')
+    sub.add_argument('--name', required=False, help='Name for environment')
+    sub.add_argument('--subnets', nargs='*', help='Subnet IDs')
+    sub.add_argument('--security-groups', nargs='*', help='Security Group IDs')
 
     sub = subparser.add_parser('start', help='Start a CloudShell')
     sub.add_argument('id')
@@ -648,10 +649,10 @@ def make_main_parser():
     sub = subparser.add_parser('stop', help='Stop a CloudShell')
     sub.add_argument('id')
 
-    sub = subparser.add_parser('ssm', help='SSM to a CloudShell (requires Session Manager plugin)')
+    sub = subparser.add_parser('ssm', help='SSM to a CloudShell')
     sub.add_argument('id')
 
-    sub = subparser.add_parser('execute', help='Executes a command on a CloudShell (requires Session Manager Plugin)')
+    sub = subparser.add_parser('execute', help='Executes a command on a CloudShell')
     sub.add_argument('id')
     sub.add_argument('--cmd', '-c', required=True)
 
@@ -666,17 +667,36 @@ def make_main_parser():
     # purposefully not making a Path cause it messes when trying to figure out things are directories
     sub.add_argument('destination', help='Destination path')
 
-    sub = subparser.add_parser('genie', help='Magically creates a CloudShell with the correct network access to reach the resource you specify')
+    sub = subparser.add_parser(
+        'genie', help='Magically creates a CloudShell with the correct network access to reach the resource you specify'
+    )
     group = sub.add_mutually_exclusive_group(required=True)
-    group.add_argument('--ip')
-    group.add_argument('--host')
-    group.add_argument('--ec2')
-    group.add_argument('--rds')
+    group.add_argument('--ip', help='IP address of ENI')
+    group.add_argument('--host', help='Publicly resolvable hostname')
+    group.add_argument('--ec2', help='EC2 instance ID')
+    group.add_argument('--rds', help='RDS instance ID')
 
-    sub.add_argument('--port', type=int)
-    sub.add_argument('--tmp', action='store_true')
-    sub.add_argument('--protocol', choices=('tcp', 'udp', 'any'), default='tcp')
+    sub.add_argument('--port', type=int, help='Port to connect on (optional for --rds)')
+    sub.add_argument('--tmp', action='store_true', help='Clean up CloudShell on exit')
+    sub.add_argument(
+        '--protocol',
+        choices=('tcp', 'udp', 'any'),
+        default='tcp',
+        help='IP protocol to connect on (default: %(default)s)',
+    )
 
+    # clean up the usage line
+    subs = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
+    subcmds = list(subs.choices.keys())
+    parser.usage = f'{parser.prog} [options] {{{",".join(subcmds)}}} ...'
+
+    # add description for each subparser so shtab works
+    for action in parser._subparsers._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            for name, subparser in action.choices.items():
+                help_text = next((a.help for a in action._choices_actions if a.dest == name), None)
+                if help_text:
+                    subparser.description = help_text
     return parser
 
 def main():
@@ -690,13 +710,13 @@ def main():
         if (args.subnets and not args.security_groups) or (args.security_groups and not args.subnets):
             parser.error('Both --subnets and --security-groups must be set')
         if args.subnets and not args.name:
-            parser.error('--name must be specified if creating a VPC CloudShell')
+            parser.error('--name is required if creating a VPC CloudShell')
         if not args.subnets and args.name:
             parser.error('--subnets and --security-groups must be set if setting name')
 
     if args.CMD == 'genie':
         if (args.ec2 or args.ip or args.host) and not args.port:
-            parser.error('--port must be specified')
+            parser.error('--port is required')
 
     level = getattr(logging, args.log.upper())
     logging.basicConfig(level=level, format='%(levelname)s\t%(message)s')

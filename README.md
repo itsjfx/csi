@@ -149,5 +149,6 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 * [x] Genie mode for IP/EC2/RDS access
 * [x] Temporary environments
 * [x] Tab completion
+* [ ] pub to pypi
 * [ ] Better tab completion (complete opts)
 * [ ] Port tunneling (hard)

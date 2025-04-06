@@ -3,8 +3,8 @@
 _shtab_csi_subparsers=('ls' 'list' 'create' 'start' 'delete' 'stop' 'ssm' 'execute' 'upload' 'download' 'genie')
 
 _shtab_csi_option_strings=('-h' '--help' '-l' '--log')
-_shtab_csi_ls_option_strings=('-h' '--help')
-_shtab_csi_list_option_strings=('-h' '--help')
+_shtab_csi_ls_option_strings=('-h' '--help' '--security-groups')
+_shtab_csi_list_option_strings=('-h' '--help' '--security-groups')
 _shtab_csi_create_option_strings=('-h' '--help' '--name' '--subnets' '--security-groups')
 _shtab_csi_start_option_strings=('-h' '--help')
 _shtab_csi_delete_option_strings=('-h' '--help')
@@ -27,8 +27,10 @@ _shtab_csi__h_nargs=0
 _shtab_csi___help_nargs=0
 _shtab_csi_ls__h_nargs=0
 _shtab_csi_ls___help_nargs=0
+_shtab_csi_ls___security_groups_nargs=0
 _shtab_csi_list__h_nargs=0
 _shtab_csi_list___help_nargs=0
+_shtab_csi_list___security_groups_nargs=0
 _shtab_csi_create__h_nargs=0
 _shtab_csi_create___help_nargs=0
 _shtab_csi_create___subnets_nargs=*

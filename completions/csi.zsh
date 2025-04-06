@@ -27,9 +27,9 @@ _shtab_csi_options=(
 
 _shtab_csi_create_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  "--name[Name for environment]:name:"
-  "--subnets[Subnet IDs]:subnets:"
-  "--security-groups[Security Group IDs]:security_groups:"
+  "--name[Name for environment (required for VPC environment)]:name:"
+  "--subnets[Subnet IDs (required for VPC environment)]:subnets:"
+  "--security-groups[Security Group IDs (default\: the default security group)]:security_groups:"
 )
 
 _shtab_csi_delete_options=(
@@ -63,10 +63,12 @@ _shtab_csi_genie_options=(
 
 _shtab_csi_list_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
+  "--security-groups[Display security groups in output]"
 )
 
 _shtab_csi_ls_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
+  "--security-groups[Display security groups in output]"
 )
 
 _shtab_csi_ssm_options=(

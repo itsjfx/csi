@@ -50,6 +50,12 @@ def get_cidr_for_subnet(subnet):
     subnet = aws_client('ec2').describe_subnets(SubnetIds=[subnet])
     return subnet['Subnets'][0]['CidrBlock']
 
+def get_default_security_group():
+    groups = aws_client('ec2').describe_security_groups(Filters=[{'Name': 'group-name', 'Values': ['default']}])
+    if not groups['SecurityGroups']:
+        return None
+    return groups['SecurityGroups'][0]
+
 def call_api(
     url,
     service=None,
@@ -337,14 +343,16 @@ class CLI:
         def job(env):
             status = cloudshell.get_environment_status(env['EnvironmentId'])
             vpc_config = env.get('VpcConfig', {})
-            return (
+            output = [
                 env['EnvironmentId'],
                 env.get('EnvironmentName', DEFAULT_ENVIRONMENT),
                 status['Status'],
                 vpc_config.get('VpcId', ''),
                 ','.join(vpc_config.get('SubnetIds', '')),
-                # ','.join(vpc_config.get('SecurityGroupIds', '')),
-            )
+            ]
+            if args.security_groups:
+                output.append(','.join(vpc_config.get('SecurityGroupIds', '')))
+            return output
 
         def get_details():
             with ThreadPoolExecutor() as executor:
@@ -368,6 +376,15 @@ class CLI:
         if args.name == DEFAULT_ENVIRONMENT:
             logging.error('You cannot create an environment named %s', DEFAULT_ENVIRONMENT)
             return 2
+
+        if not args.security_groups:
+            default = get_default_security_group()
+            if not default:
+                logging.error(
+                    'No default security group found. Please specify at least 1 security group with --security-groups'
+                )
+                return 3
+            args.security_groups = [default['GroupId']]
         response = cloudshell._create_environment(args.name, args.subnets, args.security_groups)
         logging.info('Creating new environment with id: %s', response['EnvironmentId'])
 
@@ -408,12 +425,21 @@ class CLI:
         algorithm = data['FileUploadPresignedFields']['x-amz-server-side-encryption-customer-algorithm']
         key = data['FileUploadPresignedFields']['x-amz-server-side-encryption-customer-key']
 
-        cmd = shell_quote([
-            'curl', '--silent', '--show-error', '--fail-with-body', url,
-            '-o', args.destination,
-            '-H', f'x-amz-server-side-encryption-customer-algorithm: {algorithm}',
-            '-H', f'x-amz-server-side-encryption-customer-key: {key}',
-        ])
+        cmd = shell_quote(
+            [
+                'curl',
+                '--silent',
+                '--show-error',
+                '--fail-with-body',
+                url,
+                '-o',
+                args.destination,
+                '-H',
+                f'x-amz-server-side-encryption-customer-algorithm: {algorithm}',
+                '-H',
+                f'x-amz-server-side-encryption-customer-key: {key}',
+            ]
+        )
         logging.info('Downloading file on CloudShell ...')
         code = cloudshell._execute(args.id, cmd)
         if code:
@@ -426,11 +452,27 @@ class CLI:
         data = cloudshell.get_file_upload_urls(EnvironmentId=args.id, FileUploadPath=args.file)
         url = data['FileUploadPresignedUrl']
         fields = data['FileUploadPresignedFields']
-        cmd = shell_quote([
-            'curl', '-X', 'POST', '--silent', '--show-error', '--fail-with-body', url,
-            *[item for k, v in fields.items() for item in ('-F', f'{k}={v}',)],
-            '-F', f'file=@{args.file}',
-        ])
+        cmd = shell_quote(
+            [
+                'curl',
+                '-X',
+                'POST',
+                '--silent',
+                '--show-error',
+                '--fail-with-body',
+                url,
+                *[
+                    item
+                    for k, v in fields.items()
+                    for item in (
+                        '-F',
+                        f'{k}={v}',
+                    )
+                ],
+                '-F',
+                f'file=@{args.file}',
+            ]
+        )
 
         logging.info('Waiting for CloudShell to upload %s ...', args.file)
         if code := cloudshell._execute(args.id, cmd):
@@ -451,8 +493,10 @@ class CLI:
 
         url = data['FileDownloadPresignedUrl']
         headers = {
-            'x-amz-server-side-encryption-customer-algorithm': fields['x-amz-server-side-encryption-customer-algorithm'],
-            'x-amz-server-side-encryption-customer-key': fields['x-amz-server-side-encryption-customer-key']
+            'x-amz-server-side-encryption-customer-algorithm': fields[
+                'x-amz-server-side-encryption-customer-algorithm'
+            ],
+            'x-amz-server-side-encryption-customer-key': fields['x-amz-server-side-encryption-customer-key'],
         }
         logging.info('Downloading %s to %s', filename, dest_path)
         chunk_size = 8192
@@ -592,11 +636,11 @@ class CLI:
                 return 1
             subnets = filtered_subnets
 
-        default = aws_client('ec2').describe_security_groups(Filters=[{'Name': 'group-name', 'Values': ['default']}])
-        if not len(default['SecurityGroups']):
+        default = get_default_security_group()
+        if not default:
             logging.warning('No default security group found, CloudShell may be missing egress access')
         else:
-            groups.append(default['SecurityGroups'][0]['GroupId'])
+            groups.append(default['GroupId'])
 
         for env in environments:
             vpc_config = env.get('VpcConfig')
@@ -634,11 +678,12 @@ def make_main_parser():
 
     for cmd in ('ls', 'list'):
         sub = subparser.add_parser(cmd, help='List available CloudShells')
+        sub.add_argument('--security-groups', action='store_true', help='Display security groups in output')
 
     sub = subparser.add_parser('create', help='Create a new CloudShell')
-    sub.add_argument('--name', required=False, help='Name for environment')
-    sub.add_argument('--subnets', nargs='*', help='Subnet IDs')
-    sub.add_argument('--security-groups', nargs='*', help='Security Group IDs')
+    sub.add_argument('--name', required=False, help='Name for environment (required for VPC environment)')
+    sub.add_argument('--subnets', nargs='*', help='Subnet IDs (required for VPC environment)')
+    sub.add_argument('--security-groups', nargs='*', help='Security Group IDs (default: the default security group)')
 
     sub = subparser.add_parser('start', help='Start a CloudShell')
     sub.add_argument('id')
@@ -707,12 +752,10 @@ def main():
         return
 
     if args.CMD == 'create':
-        if (args.subnets and not args.security_groups) or (args.security_groups and not args.subnets):
-            parser.error('Both --subnets and --security-groups must be set')
         if args.subnets and not args.name:
             parser.error('--name is required if creating a VPC CloudShell')
         if not args.subnets and args.name:
-            parser.error('--subnets and --security-groups must be set if setting name')
+            parser.error('--subnets must be set if setting name')
 
     if args.CMD == 'genie':
         if (args.ec2 or args.ip or args.host) and not args.port:

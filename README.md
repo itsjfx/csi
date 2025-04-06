@@ -68,10 +68,13 @@ e8278021-e179-4e44-9e7d-6fedd64960f1  csi-rds                       SUSPENDED  v
 ### Creating a CloudShell environment
 
 ```bash
-# Create a default environment
+# Create a default CloudShell environment (no VPC)
 $ csi create
 
-# Create a named environment in a specific VPC
+# Create a VPC CloudShell environment in a specific subnet, using the default security group
+$ csi create --name my-vpc-shell --subnets subnet-01234567890abcdef
+
+# Create a VPC CloudShell environment in a specific subnet, specifying a security group
 $ csi create --name my-vpc-shell --subnets subnet-01234567890abcdef --security-groups sg-01234567890abcdef
 ```
 
@@ -84,11 +87,9 @@ $ csi start 90356db8-8797-4d97-b776-2fb3696e0132
 
 # Stop an environment
 $ csi stop default
-$ csi stop 90356db8-8797-4d97-b776-2fb3696e0132
 
 # Delete an environment
 $ csi delete default
-$ csi delete 90356db8-8797-4d97-b776-2fb3696e0132
 ```
 
 ### Connecting to a CloudShell environment via Systems Manager (SSM)

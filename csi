@@ -425,6 +425,10 @@ class CLI:
         algorithm = data['FileUploadPresignedFields']['x-amz-server-side-encryption-customer-algorithm']
         key = data['FileUploadPresignedFields']['x-amz-server-side-encryption-customer-key']
 
+        # allow destinations being a directory
+        if args.destination.endswith('/'):
+            args.destination += Path(args.file.name).name
+
         cmd = shell_quote(
             [
                 'curl',

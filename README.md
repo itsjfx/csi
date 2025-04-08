@@ -43,7 +43,7 @@ If you want tab completion, completion files are in [completions/](./completions
 * For `bash`, put `csi.bash` in `$XDG_DATA_HOME/bash-completion/` or `~/.local/share/bash-completion/` if `$XDG_DATA_HOME` is not set
     * e.g. `ln -srf completions/csi.bash ~/.local/share/bash-completion/`
 * For `zsh`, put `csi.zsh` somewhere in your `fpath` as `_csi`
-    * `ln -srf completions/csi.zsh /path/to/fpath/_csi`
+    * e.g. `ln -srf completions/csi.zsh /path/to/fpath/_csi`
 
 ## Warnings
 
@@ -111,6 +111,7 @@ $ csi execute default -c 'aws s3 ls'
 ### Uploading and Downloading files
 
 ```bash
+$ csi upload default /tmp/data.sql /tmp/
 $ csi upload default /tmp/data.sql /tmp/data.sql
 
 $ csi download default /tmp/data.sql /tmp/

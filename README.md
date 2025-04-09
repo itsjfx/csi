@@ -37,7 +37,8 @@ This is extremely useful for troubleshooting issues:
 
 1. Install dependencies using `uv` or `pip`
 2. If you wish to use `csi ssm`, `csi execute`, or `csi genie`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`
-3. Run `csi`
+3. Run `bin/csi`
+4. Symlink `bin/csi` on your `PATH`, or add `/path/to/repo/bin/` to your `PATH` to run `csi` globally
 
 If you want tab completion, completion files are in [completions/](./completions/)
 * For `bash`, put `csi.bash` in `$XDG_DATA_HOME/bash-completion/` or `~/.local/share/bash-completion/` if `$XDG_DATA_HOME` is not set

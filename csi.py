@@ -228,11 +228,15 @@ class Cloudshell:
                 cmd = ['session-manager-plugin', json.dumps(data), get_region(), 'StartSession']
                 subprocess.check_call(cmd)
 
-    def _wait_for_start(self, id):
+    def _start_environment(self, id):
+        data = self.get_environment_status(EnvironmentId=id)
         while True:
             data = self.get_environment_status(EnvironmentId=id)
             logging.info('Environment is %s ...', data['Status'])
-            if data['Status'] in {'RESUMING', 'CREATING'}:
+            if data['Status'] in {'SUSPENDED'}:
+                self.start_environment(EnvironmentId=id)
+                time.sleep(3)
+            elif data['Status'] in {'RESUMING', 'CREATING', 'SUSPENDING'}:
                 time.sleep(1)
             elif data['Status'] == 'RUNNING':
                 break
@@ -245,7 +249,10 @@ class Cloudshell:
             logging.debug('Creating environment: %s with subnets: %r and security groups: %r', name, subnets, sgs)
             vpc = get_vpc_from_subnets(subnets)
             data = {'EnvironmentName': name, 'VpcConfig': {'VpcId': vpc, 'SecurityGroupIds': sgs, 'SubnetIds': subnets}}
-        return self.create_environment(**data)
+        env = self.create_environment(**data)
+        id = env['EnvironmentId']
+        cloudshell._start_environment(id)
+        return id
 
     @contextlib.contextmanager
     def _use_environment(
@@ -255,11 +262,11 @@ class Cloudshell:
     ):
         try:
             env = self._create_environment(*args, temporary=temporary)
-            yield env['EnvironmentId']
+            yield env
         finally:
             if temporary:
                 logging.info('Deleting temporary CloudShell environment...')
-                cloudshell.delete_environment(EnvironmentId=env['EnvironmentId'])
+                cloudshell.delete_environment(EnvironmentId=env)
 
     def _send_heart_beat_loop(self, id, timeout=60):
         while True:
@@ -390,8 +397,7 @@ class CLI:
 
     @staticmethod
     def start(args):
-        cloudshell.start_environment(EnvironmentId=args.id)
-        cloudshell._wait_for_start(args.id)
+        cloudshell._start_environment(args.id)
 
     @staticmethod
     def delete(args):
@@ -403,17 +409,18 @@ class CLI:
 
     @staticmethod
     def ssm(args):
-        cloudshell.start_environment(EnvironmentId=args.id)
-        cloudshell._wait_for_start(args.id)
+        cloudshell._start_environment(args.id)
         cloudshell._ssm(args.id)
 
     # sort of dodgy
     @staticmethod
     def execute(args):
-        return cloudshell._execute(args.id, args.cmd)
+        cloudshell._start_environment(args.id)
+        return cloudshell._execute(args.id, args.cmd, stdout=sys.stderr)
 
     @staticmethod
     def upload(args):
+        cloudshell._start_environment(args.id)
         data = cloudshell.get_file_upload_urls(EnvironmentId=args.id, FileUploadPath=args.destination)
         url = data['FileUploadPresignedUrl']
         fields = data['FileUploadPresignedFields']
@@ -453,6 +460,7 @@ class CLI:
 
     @staticmethod
     def download(args):
+        cloudshell._start_environment(args.id)
         data = cloudshell.get_file_upload_urls(EnvironmentId=args.id, FileUploadPath=args.file)
         url = data['FileUploadPresignedUrl']
         fields = data['FileUploadPresignedFields']
@@ -599,11 +607,6 @@ class CLI:
                 logging.debug('name with hash: %s', name)
             return name
 
-        def connect_to_environment(id):
-            cloudshell.start_environment(EnvironmentId=id)
-            cloudshell._wait_for_start(id)
-            cloudshell._ssm(id)
-
         if args.host:
             args.ip = socket.gethostbyname(args.host)
 
@@ -625,7 +628,7 @@ class CLI:
         for env in environments:
             if env.get('EnvironmentName') == name:
                 logging.info('Using existing environment: %s', name)
-                connect_to_environment(env['EnvironmentId'])
+                cloudshell._ssm(env['EnvironmentId'])
                 return
 
         rules = list(get_matching_rules(groups))

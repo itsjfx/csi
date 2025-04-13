@@ -231,7 +231,6 @@ class Cloudshell:
                 subprocess.check_call(cmd)
 
     def _start_environment(self, id):
-        data = self.get_environment_status(EnvironmentId=id)
         while True:
             data = self.get_environment_status(EnvironmentId=id)
             logging.info('Environment is %s ...', data['Status'])

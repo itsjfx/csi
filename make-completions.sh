@@ -59,7 +59,7 @@ _csi_rds() {
 import boto3
 for page in boto3.client('rds').get_paginator('describe_db_instances').paginate():
     for instance in page['DBInstances']:
-        print(instance['DBInstanceIdentifier'], instance['Engine'], sep='\t')
+        print(instance['DBInstanceIdentifier'], instance['Engine'], instance['DBName'], sep='\t')
 "
 }
 

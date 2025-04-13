@@ -69,7 +69,7 @@ _shtab_csi_genie___tmp_nargs=0
 
 # Custom Preamble
 # this will execute something
-# and generates completeions from its new-line separated stdout
+# and generates completions from its new-line separated stdout
 _csi_complete() {
     local args func IFS
     func="$1"

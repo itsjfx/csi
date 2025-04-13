@@ -20,7 +20,7 @@ Each command and flag has tab completion (where needed).
 
 <details><summary><b>Click here to see demo</b></summary>
    
-![demo 18 73](https://github.com/user-attachments/assets/537c7de1-180f-47ec-8827-5bae3d1e53d2)
+![demo 18 70](https://github.com/user-attachments/assets/d0476469-865f-4477-b1db-e3c08cadc812)
 </details>
 
 ## Why use csi?

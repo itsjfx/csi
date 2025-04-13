@@ -176,6 +176,7 @@ class Cloudshell:
         self.put_credentials(EnvironmentId=id, KeyBase=keybase, RefreshToken=token)
 
     def _execute(self, id, cmd, stdout=sys.stdout):
+        cloudshell._start_environment(id)
         data = cloudshell.create_session(EnvironmentId=id, QCliDisabled=True)
         with cloudshell._heart_beat(id):
             proc = subprocess.Popen(
@@ -221,6 +222,7 @@ class Cloudshell:
         return code
 
     def _ssm(self, id):
+        cloudshell._start_environment(id)
         cloudshell._upload_credentials(id)
         data = cloudshell.create_session(EnvironmentId=id)
         with ignore_user_entered_signals():
@@ -409,13 +411,11 @@ class CLI:
 
     @staticmethod
     def ssm(args):
-        cloudshell._start_environment(args.id)
         cloudshell._ssm(args.id)
 
     # sort of dodgy
     @staticmethod
     def execute(args):
-        cloudshell._start_environment(args.id)
         return cloudshell._execute(args.id, args.cmd, stdout=sys.stderr)
 
     @staticmethod

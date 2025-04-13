@@ -16,6 +16,8 @@ It allows you to manage and connect to VPC and non-VPC CloudShell sessions direc
     * EC2 instances
     * RDS databases
 
+Each command and flag has tab completion (where needed).
+
 ## Why use csi?
 
 Unfortunately, CloudShell is only available on the AWS console. There's no official support in the AWS CLI or any AWS SDK.
@@ -41,11 +43,12 @@ This is extremely useful for troubleshooting issues:
 4. Run `bin/csi`
 5. Symlink `bin/csi` on your `PATH`, or add `/path/to/repo/bin/` to your `PATH` to run `csi` globally
 
-If you want tab completion, completion files are in [completions/](./completions/)
+If you want tab completion, completion files are in [completions/](./completions/):
 * For `bash`, put `csi.bash` in `$XDG_DATA_HOME/bash-completion/` or `~/.local/share/bash-completion/` if `$XDG_DATA_HOME` is not set
     * e.g. `ln -srf completions/csi.bash ~/.local/share/bash-completion/`
 * For `zsh`, put `csi.zsh` somewhere in your `fpath` as `_csi`
     * e.g. `ln -srf completions/csi.zsh /path/to/fpath/_csi`
+* **NOTE** to complete certain flags, tab completion depends on `python3`, `boto3`, and `csi` being available
 
 ## Warnings
 
@@ -56,7 +59,8 @@ If you want tab completion, completion files are in [completions/](./completions
 
 ## Example usage
 
-You can refer by the identifier or name of a CloudShell environment in commands
+* NOTE: Each command and option has tab completion (where needed)
+* You can use the identifier or name to refer to a CloudShell environment
 
 ### Listing CloudShell environments
 
@@ -153,5 +157,6 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 * [x] Temporary environments
 * [x] Tab completion
 * [ ] pub to pypi
-* [ ] Better tab completion (complete opts)
+* [x] Better tab completion (complete opts)
 * [ ] Port tunneling (hard)
+* [ ] Output genie ID (do not connect)

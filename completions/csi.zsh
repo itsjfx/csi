@@ -28,34 +28,34 @@ _shtab_csi_options=(
 _shtab_csi_create_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
   "--name[Name for environment (required for VPC environment)]:name:"
-  "--subnets[Subnet IDs (required for VPC environment)]:subnets:"
-  "--security-groups[Security Group IDs (default\: the default security group)]:security_groups:"
+  "--subnets[Subnet IDs (required for VPC environment)]:subnets:_csi_complete_subnets"
+  "--security-groups[Security Group IDs (default\: the default security group)]:security_groups:_csi_complete_sgs"
 )
 
 _shtab_csi_delete_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  ":id:"
+  ":id:_csi_complete_cloudshell"
 )
 
 _shtab_csi_download_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  ":id:"
+  ":id:_csi_complete_cloudshell"
   ":File on CloudShell to download:"
-  ":Destination path:"
+  ":Destination path:_csi_complete_files"
 )
 
 _shtab_csi_execute_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
   {--cmd,-c}"[]:cmd:"
-  ":id:"
+  ":id:_csi_complete_cloudshell"
 )
 
 _shtab_csi_genie_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  "--ip[IP address of ENI]:ip:"
+  "--ip[IP address of ENI]:ip:_csi_complete_eni"
   "--host[Publicly resolvable hostname]:host:"
-  "--ec2[EC2 instance ID]:ec2:"
-  "--rds[RDS instance ID]:rds:"
+  "--ec2[EC2 instance ID]:ec2:_csi_complete_ec2"
+  "--rds[RDS instance ID]:rds:_csi_complete_rds"
   "--port[Port to connect on (optional for --rds)]:port:"
   "--tmp[Clean up CloudShell on exit]"
   "--protocol[IP protocol to connect on (default\: tcp)]:protocol:(tcp udp any)"
@@ -73,23 +73,23 @@ _shtab_csi_ls_options=(
 
 _shtab_csi_ssm_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  ":id:"
+  ":id:_csi_complete_cloudshell"
 )
 
 _shtab_csi_start_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  ":id:"
+  ":id:_csi_complete_cloudshell_suspended"
 )
 
 _shtab_csi_stop_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  ":id:"
+  ":id:_csi_complete_cloudshell_running"
 )
 
 _shtab_csi_upload_options=(
   "(- : *)"{-h,--help}"[show this help message and exit]"
-  ":id:"
-  ":File from machine to upload:"
+  ":id:_csi_complete_cloudshell"
+  ":File from machine to upload:_csi_complete_files"
   ":Destination path:"
 )
 
@@ -123,6 +123,98 @@ _shtab_csi() {
   esac
 }
 
+# Custom Preamble
+# this will execute something
+# and generates completeions from its new-line separated stdout
+_csi_complete() {
+    local args func IFS
+    func="$1"
+    shift
+    IFS=$'\t'
+    # TODO support batching matches
+    while read -r match display; do
+        if [ -n "$ZSH_VERSION" ]; then
+            local -a matches
+            display="${display//$'\t'/    }"
+            matches=("$match: $display")
+            # TODO use compadd directly
+            _describe 'command' matches
+        elif [ -n "$BASH_VERSION" ]; then
+            local cur="${COMP_WORDS[COMP_CWORD]}"
+            compgen -W "$match" -- "$cur"
+        fi
+    done < <("$func" "$@")
+}
+
+_csi_complete_files() {
+    if [ -n "$ZSH_VERSION" ]; then
+        _files
+    elif [ -n "$BASH_VERSION" ]; then
+        compgen -f -- "$1"
+    fi
+}
+_csi_complete_cloudshell() { _csi_complete _csi_cloudshell_status; }
+_csi_complete_cloudshell_running() { _csi_complete _csi_cloudshell_status RUNNING; }
+_csi_complete_cloudshell_suspended() { _csi_complete _csi_cloudshell_status SUSPENDED; }
+_csi_complete_ec2() { _csi_complete _csi_ec2; }
+_csi_complete_rds() { _csi_complete _csi_rds; }
+_csi_complete_eni() { _csi_complete _csi_eni; }
+_csi_complete_subnets() { _csi_complete _csi_subnets; }
+_csi_complete_sgs() { _csi_complete _csi_sgs; }
+
+_csi_cloudshell_status() {
+    csi ls | awk -F'\t' -v status="$1" 'status == "" || $3 == status { print $2, $1, $3, $4, $5 }' OFS='\t'
+}
+# i need to benchmark
+# but i figure python is quicker than aws cli for paginated requests
+_csi_ec2() {
+    python3 -c "
+import boto3
+for page in boto3.client('ec2').get_paginator('describe_instances').paginate():
+    for reservation in page['Reservations']:
+        for instance in reservation['Instances']:
+            print(instance['InstanceId'], instance['PublicIpAddress'], sep='\t')
+"
+}
+
+_csi_rds() {
+    python3 -c "
+import boto3
+for page in boto3.client('rds').get_paginator('describe_db_instances').paginate():
+    for instance in page['DBInstances']:
+        print(instance['DBInstanceIdentifier'], instance['Engine'], sep='\t')
+"
+}
+
+_csi_eni() {
+    python3 -c "
+import boto3
+for page in boto3.client('ec2').get_paginator('describe_network_interfaces').paginate():
+    for interface in page['NetworkInterfaces']:
+        print(interface['PrivateIpAddress'], interface['NetworkInterfaceId'], interface['Status'], sep='\t')
+"
+}
+
+_csi_subnets() {
+    python3 -c "
+import boto3
+for page in boto3.client('ec2').get_paginator('describe_subnets').paginate():
+    for subnet in page['Subnets']:
+        name = next((t['Value'] for t in subnet.get('Tags', []) if t['Key'] == 'Name'), '')
+        print(subnet['SubnetId'], name, subnet['AvailabilityZone'], subnet['CidrBlock'], subnet['VpcId'], sep='\t')
+"
+}
+
+_csi_sgs() {
+    python3 -c "
+import boto3
+for page in boto3.client('ec2').get_paginator('describe_security_groups').paginate():
+    for group in page['SecurityGroups']:
+        print(group['GroupId'], group['GroupName'], group.get('VpcId'), sep='\t')
+"
+}
+
+# End Custom Preamble
 
 
 typeset -A opt_args

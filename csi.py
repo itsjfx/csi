@@ -661,14 +661,16 @@ class CLI:
                     'Environment: %s has the same VPC config, re-using existing environment',
                     env.get('EnvironmentName', DEFAULT_ENVIRONMENT),
                 )
-                connect_to_environment(env['EnvironmentId'])
+                cloudshell._ssm(env['EnvironmentId'])
                 return
 
         with cloudshell._use_environment(name, subnets, groups, temporary=args.tmp) as id:
-            cloudshell._wait_for_start(id)
             if args.rds:
                 logging.info('Connect to RDS on %s:%d', host, port)
             cloudshell._ssm(id)
+
+def completer(name):
+    return {'bash': '_csi_complete_' + name, 'zsh': '_csi_complete_' + name}
 
 # for shtab
 def make_main_parser():
@@ -689,44 +691,50 @@ def make_main_parser():
 
     sub = subparser.add_parser('create', help='Create a new CloudShell')
     sub.add_argument('--name', required=False, help='Name for environment (required for VPC environment)')
-    sub.add_argument('--subnets', nargs='*', help='Subnet IDs (required for VPC environment)')
-    sub.add_argument('--security-groups', nargs='*', help='Security Group IDs (default: the default security group)')
+    sub.add_argument('--subnets', nargs='*', help='Subnet IDs (required for VPC environment)').complete = completer(
+        'subnets'
+    )
+    sub.add_argument(
+        '--security-groups', nargs='*', help='Security Group IDs (default: the default security group)'
+    ).complete = completer('sgs')
 
     sub = subparser.add_parser('start', help='Start a CloudShell')
-    sub.add_argument('id')
+    sub.add_argument('id').complete = completer('cloudshell_suspended')
 
     sub = subparser.add_parser('delete', help='Delete a CloudShell')
-    sub.add_argument('id')
+    sub.add_argument('id').complete = completer('cloudshell')
 
     sub = subparser.add_parser('stop', help='Stop a CloudShell')
-    sub.add_argument('id')
+    sub.add_argument('id').complete = completer('cloudshell_running')
 
     sub = subparser.add_parser('ssm', help='SSM to a CloudShell')
-    sub.add_argument('id')
+    sub.add_argument('id').complete = completer('cloudshell')
 
     sub = subparser.add_parser('execute', help='Executes a command on a CloudShell')
-    sub.add_argument('id')
+    sub.add_argument('id').complete = completer('cloudshell')
     sub.add_argument('--cmd', '-c', required=True)
 
     sub = subparser.add_parser('upload', help='Upload a file to a CloudShell')
-    sub.add_argument('id')
-    sub.add_argument('file', type=argparse.FileType('rb'), help='File from machine to upload')
+    sub.add_argument('id').complete = completer('cloudshell')
+    sub.add_argument('file', type=argparse.FileType('rb'), help='File from machine to upload').complete = completer(
+        'files'
+    )
     sub.add_argument('destination', help='Destination path')
 
     sub = subparser.add_parser('download', help='Download a file from a CloudShell')
-    sub.add_argument('id')
+    sub.add_argument('id').complete = completer('cloudshell')
     sub.add_argument('file', help='File on CloudShell to download')
     # purposefully not making a Path cause it messes when trying to figure out things are directories
-    sub.add_argument('destination', help='Destination path')
+    sub.add_argument('destination', help='Destination path').complete = completer('files')
 
     sub = subparser.add_parser(
         'genie', help='Magically creates a CloudShell with the correct network access to reach the resource you specify'
     )
     group = sub.add_mutually_exclusive_group(required=True)
-    group.add_argument('--ip', help='IP address of ENI')
+    group.add_argument('--ip', help='IP address of ENI').complete = completer('eni')
     group.add_argument('--host', help='Publicly resolvable hostname')
-    group.add_argument('--ec2', help='EC2 instance ID')
-    group.add_argument('--rds', help='RDS instance ID')
+    group.add_argument('--ec2', help='EC2 instance ID').complete = completer('ec2')
+    group.add_argument('--rds', help='RDS instance ID').complete = completer('rds')
 
     sub.add_argument('--port', type=int, help='Port to connect on (optional for --rds)')
     sub.add_argument('--tmp', action='store_true', help='Clean up CloudShell on exit')

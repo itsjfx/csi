@@ -48,7 +48,7 @@ If you want tab completion, completion files are in [completions/](./completions
     * e.g. `ln -srf completions/csi.bash ~/.local/share/bash-completion/`
 * For `zsh`, put `csi.zsh` somewhere in your `fpath` as `_csi`
     * e.g. `ln -srf completions/csi.zsh /path/to/fpath/_csi`
-* **NOTE** to complete certain flags, tab completion depends on `python3`, `boto3`, and `csi` being available
+* **NOTE** to complete certain flags, tab completion depends on `python3`, `boto3`, `csi`, and `awk`
 
 ## Warnings
 

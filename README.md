@@ -18,6 +18,12 @@ It allows you to manage and connect to VPC and non-VPC CloudShell sessions direc
 
 Each command and flag has tab completion (where needed).
 
+<details><summary><b>Click here to see demo</b></summary>
+   
+![demo 20 80](https://github.com/user-attachments/assets/ef5ef3d0-8740-4ee2-bfcd-54648397fb09)
+
+</details>
+
 ## Why use csi?
 
 Unfortunately, CloudShell is only available on the AWS console. There's no official support in the AWS CLI or any AWS SDK.

@@ -5,17 +5,17 @@
 
 _shtab_csi_commands() {
   local _commands=(
-    "create:Create a new CloudShell"
-    "delete:Delete a CloudShell"
-    "download:Download a file from a CloudShell"
-    "execute:Executes a command on a CloudShell"
-    "genie:Magically creates a CloudShell with the correct network access to reach the resource you specify"
-    "list:List available CloudShells"
-    "ls:List available CloudShells"
-    "ssm:SSM to a CloudShell"
-    "start:Start a CloudShell"
-    "stop:Stop a CloudShell"
-    "upload:Upload a file to a CloudShell"
+    "create:Create a new CloudShell environment"
+    "delete:Delete a CloudShell environment"
+    "download:Download a file from a CloudShell environment"
+    "execute:Executes a command on a CloudShell environment"
+    "genie:Magically creates and connects to a CloudShell environment with the correct network access to reach the resource you specify"
+    "list:List available CloudShell environments"
+    "ls:List available CloudShell environments"
+    "ssm:SSM to a CloudShell environment"
+    "start:Start a CloudShell environment"
+    "stop:Stop a CloudShell environment"
+    "upload:Upload a file to a CloudShell environment"
   )
   _describe 'csi commands' _commands
 }
@@ -57,8 +57,9 @@ _shtab_csi_genie_options=(
   "--ec2[EC2 instance ID]:ec2:_csi_complete_ec2"
   "--rds[RDS instance ID]:rds:_csi_complete_rds"
   "--port[Port to connect on (optional for --rds)]:port:"
-  "--tmp[Clean up CloudShell on exit]"
   "--protocol[IP protocol to connect on (default\: tcp)]:protocol:(tcp udp any)"
+  "--tmp[Clean up CloudShell environment on exit (if new)]"
+  "--output-id[Output the ID to stdout and do not connect]"
 )
 
 _shtab_csi_list_options=(

@@ -606,6 +606,12 @@ class CLI:
                 logging.debug('name with hash: %s', name)
             return name
 
+        def connect_to(id):
+            if args.output_id:
+                print(id)
+                return
+            cloudshell._ssm(id)
+
         if args.host:
             args.ip = socket.gethostbyname(args.host)
 
@@ -627,7 +633,9 @@ class CLI:
         for env in environments:
             if env.get('EnvironmentName') == name:
                 logging.info('Using existing environment: %s', name)
-                cloudshell._ssm(env['EnvironmentId'])
+                if args.tmp:
+                    logging.warning('Environment will not be cleaned up on exit')
+                connect_to(env['EnvironmentId'])
                 return
 
         rules = list(get_matching_rules(groups))
@@ -660,13 +668,15 @@ class CLI:
                     'Environment: %s has the same VPC config, re-using existing environment',
                     env.get('EnvironmentName', DEFAULT_ENVIRONMENT),
                 )
-                cloudshell._ssm(env['EnvironmentId'])
+                if args.tmp:
+                    logging.warning('Environment will not be cleaned up on exit')
+                connect_to(env['EnvironmentId'])
                 return
 
         with cloudshell._use_environment(name, subnets, groups, temporary=args.tmp) as id:
             if args.rds:
                 logging.info('Connect to RDS on %s:%d', host, port)
-            cloudshell._ssm(id)
+            connect_to(id)
 
 def completer(name):
     return {'bash': '_csi_complete_' + name, 'zsh': '_csi_complete_' + name}
@@ -685,10 +695,10 @@ def make_main_parser():
     subparser = parser.add_subparsers(dest='CMD', required=False)
 
     for cmd in ('ls', 'list'):
-        sub = subparser.add_parser(cmd, help='List available CloudShells')
+        sub = subparser.add_parser(cmd, help='List available CloudShell environments')
         sub.add_argument('--security-groups', action='store_true', help='Display security groups in output')
 
-    sub = subparser.add_parser('create', help='Create a new CloudShell')
+    sub = subparser.add_parser('create', help='Create a new CloudShell environment')
     sub.add_argument('--name', required=False, help='Name for environment (required for VPC environment)')
     sub.add_argument('--subnets', nargs='*', help='Subnet IDs (required for VPC environment)').complete = completer(
         'subnets'
@@ -697,37 +707,38 @@ def make_main_parser():
         '--security-groups', nargs='*', help='Security Group IDs (default: the default security group)'
     ).complete = completer('sgs')
 
-    sub = subparser.add_parser('start', help='Start a CloudShell')
+    sub = subparser.add_parser('start', help='Start a CloudShell environment')
     sub.add_argument('id').complete = completer('cloudshell_suspended')
 
-    sub = subparser.add_parser('delete', help='Delete a CloudShell')
+    sub = subparser.add_parser('delete', help='Delete a CloudShell environment')
     sub.add_argument('id').complete = completer('cloudshell')
 
-    sub = subparser.add_parser('stop', help='Stop a CloudShell')
+    sub = subparser.add_parser('stop', help='Stop a CloudShell environment')
     sub.add_argument('id').complete = completer('cloudshell_running')
 
-    sub = subparser.add_parser('ssm', help='SSM to a CloudShell')
+    sub = subparser.add_parser('ssm', help='SSM to a CloudShell environment')
     sub.add_argument('id').complete = completer('cloudshell')
 
-    sub = subparser.add_parser('execute', help='Executes a command on a CloudShell')
+    sub = subparser.add_parser('execute', help='Executes a command on a CloudShell environment')
     sub.add_argument('id').complete = completer('cloudshell')
     sub.add_argument('--cmd', '-c', required=True)
 
-    sub = subparser.add_parser('upload', help='Upload a file to a CloudShell')
+    sub = subparser.add_parser('upload', help='Upload a file to a CloudShell environment')
     sub.add_argument('id').complete = completer('cloudshell')
     sub.add_argument('file', type=argparse.FileType('rb'), help='File from machine to upload').complete = completer(
         'files'
     )
     sub.add_argument('destination', help='Destination path')
 
-    sub = subparser.add_parser('download', help='Download a file from a CloudShell')
+    sub = subparser.add_parser('download', help='Download a file from a CloudShell environment')
     sub.add_argument('id').complete = completer('cloudshell')
     sub.add_argument('file', help='File on CloudShell to download')
     # purposefully not making a Path cause it messes when trying to figure out things are directories
     sub.add_argument('destination', help='Destination path').complete = completer('files')
 
     sub = subparser.add_parser(
-        'genie', help='Magically creates a CloudShell with the correct network access to reach the resource you specify'
+        'genie',
+        help='Magically creates and connects to a CloudShell environment with the correct network access to reach the resource you specify',
     )
     group = sub.add_mutually_exclusive_group(required=True)
     group.add_argument('--ip', help='IP address of ENI').complete = completer('eni')
@@ -736,13 +747,16 @@ def make_main_parser():
     group.add_argument('--rds', help='RDS instance ID').complete = completer('rds')
 
     sub.add_argument('--port', type=int, help='Port to connect on (optional for --rds)')
-    sub.add_argument('--tmp', action='store_true', help='Clean up CloudShell on exit')
     sub.add_argument(
         '--protocol',
         choices=('tcp', 'udp', 'any'),
         default='tcp',
         help='IP protocol to connect on (default: %(default)s)',
     )
+
+    group = sub.add_mutually_exclusive_group(required=False)
+    group.add_argument('--tmp', action='store_true', help='Clean up CloudShell environment on exit (if new)')
+    group.add_argument('--output-id', action='store_true', help='Output the ID to stdout and do not connect')
 
     # clean up the usage line
     subs = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))

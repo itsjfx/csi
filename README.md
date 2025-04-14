@@ -130,7 +130,7 @@ $ csi download default /tmp/data.sql /tmp/
 
 ### Magic Genie
 
-Genie magically creates a CloudShell with the correct network access to reach the resource you specify.
+Genie magically creates and connects to a CloudShell environment with the correct network access to reach the resource you specify.
 
 Temporary genie environments can be created with `--tmp`
 
@@ -149,6 +149,9 @@ $ csi genie --host internal-service.example.com --port 8080
 
 # Create a temporary environment that will be deleted after use with --tmp
 $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
+
+# Create a CloudShell and output the ID to stdout
+$ csi genie --ec2 i-01234567890abcdef --port 22 --output-id
 ```
 
 ## Roadmap
@@ -164,4 +167,4 @@ $ csi genie --ec2 i-01234567890abcdef --port 22 --tmp
 * [ ] pub to pypi
 * [x] Better tab completion (complete opts)
 * [ ] Port tunneling (hard)
-* [ ] Output genie ID (do not connect)
+* [x] Output genie ID (do not connect)

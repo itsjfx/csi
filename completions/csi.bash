@@ -13,7 +13,7 @@ _shtab_csi_ssm_option_strings=('-h' '--help')
 _shtab_csi_execute_option_strings=('-h' '--help' '--cmd' '-c')
 _shtab_csi_upload_option_strings=('-h' '--help')
 _shtab_csi_download_option_strings=('-h' '--help')
-_shtab_csi_genie_option_strings=('-h' '--help' '--ip' '--host' '--ec2' '--rds' '--port' '--tmp' '--protocol')
+_shtab_csi_genie_option_strings=('-h' '--help' '--ip' '--host' '--ec2' '--rds' '--port' '--protocol' '--tmp' '--output-id')
 
 _shtab_csi_create___subnets_COMPGEN=_csi_complete_subnets
 _shtab_csi_create___security_groups_COMPGEN=_csi_complete_sgs
@@ -65,6 +65,7 @@ _shtab_csi_download___help_nargs=0
 _shtab_csi_genie__h_nargs=0
 _shtab_csi_genie___help_nargs=0
 _shtab_csi_genie___tmp_nargs=0
+_shtab_csi_genie___output_id_nargs=0
 
 
 # Custom Preamble

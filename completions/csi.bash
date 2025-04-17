@@ -118,7 +118,8 @@ import boto3
 for page in boto3.client('ec2').get_paginator('describe_instances').paginate():
     for reservation in page['Reservations']:
         for instance in reservation['Instances']:
-            print(instance['InstanceId'], instance['PublicIpAddress'], sep='\t')
+            name = next((t['Value'] for t in instance.get('Tags', []) if t['Key'] == 'Name'), '')
+            print(instance['InstanceId'], name, instance['PlatformDetails'], instance['State']['Name'], instance['InstanceType'], instance['LaunchTime'], instance['Placement']['AvailabilityZone'], instance['PrivateIpAddress'], sep='\t')
 "
 }
 

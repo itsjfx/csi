@@ -11,7 +11,7 @@ It allows you to manage and connect to VPC and non-VPC CloudShell sessions direc
 * **Connect** to CloudShell environments via SSM in the terminal
 * **Download and upload files** between your machine and CloudShell environments
 * **Execute commands** remotely on CloudShell environments
-* **Genie** - magically creates a CloudShell with the right network access to reach:
+* **Genie** - magically creates a CloudShell environment with the right network access to reach:
     * hostnames/IP addresses and ports
     * EC2 instances
     * RDS databases
@@ -131,6 +131,14 @@ $ csi download default /tmp/data.sql /tmp/
 ### Magic Genie
 
 Genie magically creates and connects to a CloudShell environment with the correct network access to reach the resource you specify.
+
+Under the hood, the genie command will:
+1. look up your resource
+2. find the associated ENI, and capture the VPC and subnets the resource lives in
+3. attempt to find any security groups allowed to access the resource for the specified port and protocol
+4. if none are found, it will check whether the CIDR range for any of the subnets captured earlier overlap in any whitelisted IP CIDR range rules for the specified port and protocol
+5. if 3) and 4) fail - then the command will exit with an error
+6. otherwise, genie will stand up a CloudShell in the appropriate subnet(s) and security groups, and attempt to add the default security group (if it exists)
 
 Temporary genie environments can be created with `--tmp`
 

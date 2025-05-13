@@ -12,7 +12,7 @@ It allows you to manage and connect to VPC and non-VPC CloudShell sessions direc
 * **Download and upload files** between your machine and CloudShell environments
 * **Execute commands** remotely on CloudShell environments
 * **Genie** - magically creates a CloudShell environment with the right network access to reach:
-    * hostnames/IP addresses and ports
+    * ENIs/hostnames/IP addresses on specific ports and IP protocols
     * EC2 instances
     * RDS databases
 

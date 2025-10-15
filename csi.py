@@ -393,8 +393,8 @@ class CLI:
                 )
                 return 3
             args.security_groups = [default['GroupId']]
-        response = cloudshell._create_environment(args.name, args.subnets, args.security_groups)
-        logging.info('Creating new environment with id: %s', response['EnvironmentId'])
+        id = cloudshell._create_environment(args.name, args.subnets, args.security_groups)
+        logging.info('Creating new environment with id: %s', id)
 
     @staticmethod
     def start(args):

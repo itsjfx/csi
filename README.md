@@ -42,11 +42,14 @@ This is extremely useful for troubleshooting issues:
 
 ## Setup
 
-1. Install dependencies using `uv` or `pip`
-2. If you wish to use `csi ssm`, `csi execute`, or `csi genie`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`
-3. Set your the AWS profile, e.g. via `AWS_PROFILE`
-4. Run `bin/csi`
-5. Symlink `bin/csi` on your `PATH`, or add `/path/to/repo/bin/` to your `PATH` to run `csi` globally
+You can install `csi` via `pip` or `uv`, etc:
+
+```bash
+uv tool install cloudshell-interface
+pip3 install cloudshell-interface
+```
+
+And run `csi --help` in your terminal
 
 If you want tab completion, completion files are in [completions/](./completions/):
 * For `bash`, put `csi.bash` in `$XDG_DATA_HOME/bash-completion/` or `~/.local/share/bash-completion/` if `$XDG_DATA_HOME` is not set
@@ -54,6 +57,14 @@ If you want tab completion, completion files are in [completions/](./completions
 * For `zsh`, put `csi.zsh` somewhere in your `fpath` as `_csi`
     * e.g. `ln -srf completions/csi.zsh /path/to/fpath/_csi`
 * **NOTE** to complete certain flags, tab completion depends on `python3`, `boto3`, `csi`, and `awk`
+
+To install from the repository:
+
+1. Install dependencies using `uv` or `pip`
+2. If you wish to use `csi ssm`, `csi execute`, or `csi genie`, you **must** have the [AWS Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) somewhere in your `PATH`
+3. Set your the AWS profile, e.g. via `AWS_PROFILE`
+4. Run `bin/csi`
+5. Symlink `bin/csi` on your `PATH`, or add `/path/to/repo/bin/` to your `PATH` to run `csi` globally
 
 ## Warnings
 
